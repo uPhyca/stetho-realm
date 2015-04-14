@@ -11,6 +11,9 @@ grab via Gradle:
 compile 'com.uphyca.stetho:stetho_realm:0.1.0'
 ```
 
+注: 今はまだバイナリ配布していないので、library ディレクトリをアプリケーションのプロジェクトにコピーして
+使ってください(ローカルのMaven リポジトリにインストールできる方はインストールして使ってください。)。
+
 ### アプリケーションへの組み込み
 `Application` クラスで以下のように Stetho の初期化を行ってください。
 ポイントは、MySQL 用の Database インスタンスを取り除き、Realm 用の Database クラスを
@@ -59,3 +62,9 @@ public class MyApplication extends Application {
 
 ## License
 Stetho-Realm is BSD-licensed.
+
+## TODO
+
+* SQLite モジュールとの共存
+* Realm データベースに Migration が必要な場合の動作確認とエラー処理
+* 読み込み以外の実装
