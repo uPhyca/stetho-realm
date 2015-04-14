@@ -16,7 +16,7 @@ compile 'com.uphyca.stetho:stetho_realm:0.1.0'
 
 ### アプリケーションへの組み込み
 `Application` クラスで以下のように Stetho の初期化を行ってください。
-ポイントは、MySQL 用の Database インスタンスを取り除き、Realm 用の Database クラスを
+ポイントは、SQLite 用の Database インスタンスを取り除き、Realm 用の Database クラスを
 追加した `InspectorModulesProvider` を Stetho に渡すことです。
 
 以下はデフォルトの設定で有効になっている SQLite モジュールの代わりに Realm モジュールを
