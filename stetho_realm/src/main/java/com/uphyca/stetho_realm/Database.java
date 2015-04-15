@@ -106,11 +106,10 @@ public class Database implements ChromeDevtoolsDomain {
                             return response;
                         }
                     });
-        } catch (SQLiteException var7) {
+        } catch (SQLiteException e) {
             Error error = new Error();
             error.code = 0;
-            //error.message = var7.getMessage();
-            error.message = "error";
+            error.message = e.getMessage();
             ExecuteSQLResponse response = new ExecuteSQLResponse();
             response.sqlError = error;
             return response;
