@@ -76,19 +76,19 @@ public class Database implements ChromeDevtoolsDomain {
                             return response;
                         }
 
-                        public ExecuteSQLResponse handleSelect(Table table, boolean addRowId) throws SQLiteException {
+                        public ExecuteSQLResponse handleSelect(Table table, boolean addRowIndex) throws SQLiteException {
                             ExecuteSQLResponse response = new ExecuteSQLResponse();
 
                             final ArrayList<String> columnNames = new ArrayList<>();
-                            if (addRowId) {
-                                columnNames.add("rowid");
+                            if (addRowIndex) {
+                                columnNames.add("<index>");
                             }
                             for (int i = 0; i < table.getColumnCount(); i++) {
                                 columnNames.add(table.getColumnName(i));
                             }
 
                             response.columnNames = columnNames;
-                            response.values = flattenRows(table, MAX_EXECUTE_RESULTS, addRowId);
+                            response.values = flattenRows(table, MAX_EXECUTE_RESULTS, addRowIndex);
                             return response;
                         }
 
@@ -117,15 +117,15 @@ public class Database implements ChromeDevtoolsDomain {
         }
     }
 
-    private List<Object> flattenRows(Table table, int limit, boolean addRowId) {
+    private List<Object> flattenRows(Table table, int limit, boolean addRowIndex) {
         Util.throwIfNot(limit >= 0);
         final List<Object> flatList = new ArrayList<>();
         long numColumns = table.getColumnCount();
 
         for (long row = 0; row < limit && row < table.size(); row++) {
             final Row rowData = table.getRow(row);
-            if (addRowId) {
-                flatList.add(row);
+            if (addRowIndex) {
+                flatList.add(rowData.getIndex());
             }
             for (int column = 0; column < numColumns; column++) {
                 switch (rowData.getColumnType(column)) {

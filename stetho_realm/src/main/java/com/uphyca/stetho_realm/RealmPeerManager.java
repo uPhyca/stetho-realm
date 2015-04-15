@@ -139,7 +139,7 @@ public class RealmPeerManager extends ChromePeerManager {
         @SuppressWarnings("unused")
         T handleRawQuery() throws SQLiteException;
 
-        T handleSelect(Table table, boolean addRowId) throws SQLiteException;
+        T handleSelect(Table table, boolean addRowIndex) throws SQLiteException;
 
         @SuppressWarnings("unused")
         T handleInsert(long var1) throws SQLiteException;
