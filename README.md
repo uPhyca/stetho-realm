@@ -8,11 +8,16 @@ Stetho-Realm は、[Stetho](https://facebook.github.io/stetho)  で [Realm](http
 ### Download
 grab via Gradle:
 ```groovy
-compile 'com.uphyca.stetho:stetho_realm:0.1.0'
-```
+repositories {
+    maven {
+        url 'https://github.com/uPhyca/stetho-realm/raw/master/maven-repo'
+    }
+}
 
-注: 今はまだバイナリ配布していないので、stetho_realm ディレクトリをアプリケーションのプロジェクトにコピーして
-使ってください(ローカルのMaven リポジトリにインストールできる方はインストールして使ってください。)。
+dependencies {
+    compile 'com.uphyca.stetho:stetho_realm:0.1.0'
+}
+```
 
 ### アプリケーションへの組み込み
 `Application` クラスで以下のように Stetho の初期化を行ってください。
@@ -68,3 +73,9 @@ Stetho-Realm is BSD-licensed.
 * SQLite モジュールとの共存
 * Realm データベースに Migration が必要な場合の動作確認とエラー処理
 * 読み込み以外の実装
+
+## deployメモ
+
+1. バージョン番号を変更
+2. ./gradlew clean assemble :stetho_realm:publishMavenPublicationToMavenRepository
+3. git に add して commit して push (masterブランチで！)
