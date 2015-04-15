@@ -1,0 +1,16 @@
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId 'com.uphyca'
+            artifactId project.name
+            version android.defaultConfig.versionName
+            artifact source: file("${project.buildDir}/outputs/aar/${project.name}-release.aar")
+        }
+    }
+    repositories {
+        maven {
+            url "file:${rootDir}/maven-repo" //Mavenリポジトリを作る場所の指定
+
+        }
+    }
+}

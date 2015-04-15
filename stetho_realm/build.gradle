@@ -26,3 +26,7 @@ dependencies {
     compile 'com.facebook.stetho:stetho:1.1.0'
     compile 'io.realm:realm-android:0.80.0'
 }
+
+
+apply plugin: 'maven-publish'
+apply from: '../deploy.gradle'
