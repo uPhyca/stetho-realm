@@ -15,14 +15,15 @@ repositories {
 }
 
 dependencies {
-    compile 'com.uphyca.stetho:stetho_realm:0.1.0'
+    compile 'com.uphyca.stetho:stetho_realm:0.2.0'
 }
 ```
 
 ### アプリケーションへの組み込み
 `Application` クラスで以下のように Stetho の初期化を行ってください。
-ポイントは、SQLite 用の Database インスタンスを取り除き、Realm 用の Database クラスを
-追加した `InspectorModulesProvider` を Stetho に渡すことです。
+
+RealmInspectorModulesProvider#wrap() メソッドが引数で渡された InspectorModulesProvider から
+SQLite 用のモジュールを取り除き、代わりに Realm 用のモジュールを追加します。
 
 以下はデフォルトの設定で有効になっている SQLite モジュールの代わりに Realm モジュールを
 使用する例です。更に独自のモジュールを追加したり、ネットワーク通信のインスペクションに対応する
@@ -38,29 +39,10 @@ public class MyApplication extends Application {
         Stetho.initialize(
                 Stetho.newInitializerBuilder(this)
                         .enableDumpapp(Stetho.defaultDumperPluginsProvider(this))
-                        .enableWebKitInspector(new MyInspectorModulesProvider(this))
+                        .enableWebKitInspector(RealmInspectorModulesProvider.wrap(
+                                this,
+                                Stetho.defaultInspectorModulesProvider(this)))
                         .build());
-    }
-
-    private static final class MyInspectorModulesProvider implements InspectorModulesProvider {
-
-        private final Context context;
-
-        public MyInspectorModulesProvider(Context context) {
-            this.context = context;
-        }
-
-        @Override
-        public Iterable<ChromeDevtoolsDomain> get() {
-            ArrayList<ChromeDevtoolsDomain> domains = new ArrayList<>();
-            for (ChromeDevtoolsDomain domain : Stetho.defaultInspectorModulesProvider(context).get()) {
-                if (!(domain instanceof com.facebook.stetho.inspector.protocol.module.Database)) {
-                    domains.add(domain);
-                }
-            }
-            domains.add(new com.uphyca.stetho_realm.Database(context, new RealmFilesProvider(context)));
-            return domains;
-        }
     }
 }
 ```
