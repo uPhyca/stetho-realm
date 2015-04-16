@@ -1,3 +1,4 @@
+//noinspection GroovyAssignabilityCheck
 apply plugin: 'com.android.library'
 
 android {
@@ -7,8 +8,8 @@ android {
     defaultConfig {
         minSdkVersion 11
         targetSdkVersion 22
-        versionCode 2
-        versionName "0.2.0"
+        versionCode 3
+        versionName "0.3.0"
     }
     buildTypes {
         release {
@@ -27,6 +28,7 @@ dependencies {
     compile 'io.realm:realm-android:0.80.0'
 }
 
-
+//noinspection GroovyAssignabilityCheck
 apply plugin: 'maven-publish'
+//noinspection GroovyAssignabilityCheck
 apply from: '../deploy.gradle'

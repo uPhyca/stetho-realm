@@ -15,7 +15,7 @@ repositories {
 }
 
 dependencies {
-    compile 'com.uphyca.stetho:stetho_realm:0.2.0'
+    compile 'com.uphyca.stetho:stetho_realm:0.3.0'
 }
 ```
 
@@ -45,6 +45,16 @@ public class MyApplication extends Application {
                         .build());
     }
 }
+```
+
+また、  ```RealmInspectorModulesProvider.wrap()``` の第三引き数で、メタデータのテーブル
+(Realm 0.80.0 では pk と metadataテーブル)の情報を表示するかどうかを指定することができます。
+
+```java
+    RealmInspectorModulesProvider.wrap(
+                                this,
+                                Stetho.defaultInspectorModulesProvider(this),
+                                true)
 ```
 
 ## License
