@@ -26,17 +26,28 @@ import java.util.List;
  *             .build());
  * </pre>
  */
+@SuppressWarnings("unused")
 public class RealmInspectorModulesProvider implements InspectorModulesProvider {
+
+    @SuppressWarnings("unused")
     public static InspectorModulesProvider wrap(Context context, InspectorModulesProvider provider) {
-        return new RealmInspectorModulesProvider(context, provider);
+        return wrap(context, provider, false);
+    }
+
+    public static InspectorModulesProvider wrap(Context context, InspectorModulesProvider provider, boolean withMetaTables) {
+        return new RealmInspectorModulesProvider(context, provider, withMetaTables);
     }
 
     private final Context context;
     private final InspectorModulesProvider baseProvider;
+    private final boolean withMetaTables;
 
-    private RealmInspectorModulesProvider(Context context, InspectorModulesProvider baseProvider) {
+    private RealmInspectorModulesProvider(Context context,
+                                          InspectorModulesProvider baseProvider,
+                                          boolean withMetaTables) {
         this.context = context.getApplicationContext();
         this.baseProvider = baseProvider;
+        this.withMetaTables = withMetaTables;
     }
 
     @Override
@@ -48,7 +59,7 @@ public class RealmInspectorModulesProvider implements InspectorModulesProvider {
             }
             modules.add(domain);
         }
-        modules.add(new com.uphyca.stetho_realm.Database(context, new RealmFilesProvider(context)));
+        modules.add(new com.uphyca.stetho_realm.Database(context, new RealmFilesProvider(context), withMetaTables));
         return modules;
     }
 }

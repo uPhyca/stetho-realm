@@ -33,11 +33,18 @@ public class Database implements ChromeDevtoolsDomain {
     private static final int MAX_EXECUTE_RESULTS = 250;
 
     private final RealmPeerManager realmPeerManager;
-    private final ObjectMapper mObjectMapper;
+    private final ObjectMapper objectMapper;
+    private final boolean withMetaTables;
 
+    @SuppressWarnings("unused")
     public Database(Context context, RealmFilesProvider filesProvider) {
-        realmPeerManager = new RealmPeerManager(context, filesProvider);
-        mObjectMapper = new ObjectMapper();
+        this(context, filesProvider, false);
+    }
+
+    public Database(Context context, RealmFilesProvider filesProvider, boolean withMetaTables) {
+        this.realmPeerManager = new RealmPeerManager(context, filesProvider);
+        this.objectMapper = new ObjectMapper();
+        this.withMetaTables = withMetaTables;
     }
 
     @ChromeDevtoolsMethod
@@ -55,16 +62,16 @@ public class Database implements ChromeDevtoolsDomain {
     @ChromeDevtoolsMethod
     @SuppressWarnings("unused")
     public JsonRpcResult getDatabaseTableNames(JsonRpcPeer peer, JSONObject params) {
-        GetDatabaseTableNamesRequest request = mObjectMapper.convertValue(params, GetDatabaseTableNamesRequest.class);
+        GetDatabaseTableNamesRequest request = objectMapper.convertValue(params, GetDatabaseTableNamesRequest.class);
         GetDatabaseTableNamesResponse response = new GetDatabaseTableNamesResponse();
-        response.tableNames = this.realmPeerManager.getDatabaseTableNames(request.databaseId);
+        response.tableNames = realmPeerManager.getDatabaseTableNames(request.databaseId, withMetaTables);
         return response;
     }
 
     @ChromeDevtoolsMethod
     @SuppressWarnings("unused")
     public JsonRpcResult executeSQL(JsonRpcPeer peer, JSONObject params) {
-        ExecuteSQLRequest request = this.mObjectMapper.convertValue(params, ExecuteSQLRequest.class);
+        ExecuteSQLRequest request = this.objectMapper.convertValue(params, ExecuteSQLRequest.class);
 
         try {
             return realmPeerManager.executeSQL(request.databaseId, request.query,

@@ -40,7 +40,7 @@ public class RealmPeerManager extends ChromePeerManager {
         });
     }
 
-    public List<String> getDatabaseTableNames(String databaseId) {
+    public List<String> getDatabaseTableNames(String databaseId, boolean withMetaTables) {
         final List<String> tableNames = new ArrayList<>();
 
         final Realm realm = openDatabase(databaseId);
@@ -52,7 +52,7 @@ public class RealmPeerManager extends ChromePeerManager {
 
             for (int i = 0; i < transaction.size(); i++) {
                 final String tableName = transaction.getTableName(i);
-                if (tableName.startsWith(TABLE_PREFIX)) {
+                if (withMetaTables || tableName.startsWith(TABLE_PREFIX)) {
                     tableNames.add(tableName);
                 }
             }
