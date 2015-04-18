@@ -16,15 +16,16 @@ repositories {
 }
 
 dependencies {
-    compile 'com.uphyca.stetho:stetho_realm:0.3.1'
+    compile 'com.uphyca.stetho:stetho_realm:0.4.0'
 }
 ```
 
 ### Integration
-In your `Application` class, please initialize Stetho with `RealmInspectorModulesProvider.wrap()`.
+In your `Application` class, please initialize Stetho with `RealmInspectorModulesProvider.ProviderBuilder` as follows.
 
-`RealmInspectorModulesProvider.wrap()` returns customized InspectorModulesProvider which removes
-SQLite modules and appends Realm module instead.
+`RealmInspectorModulesProvider.ProviderBuilder` replaces SQLite module with Realm module.
+You can use `RealmInspectorModulesProvider.ProviderBuilder#baseProvider(InspectorModulesProvider)`
+in order to customized `InspectorModulesProvider` instead of default provider.
 
 ```java
 public class MyApplication extends Application {
@@ -36,22 +37,20 @@ public class MyApplication extends Application {
         Stetho.initialize(
                 Stetho.newInitializerBuilder(this)
                         .enableDumpapp(Stetho.defaultDumperPluginsProvider(this))
-                        .enableWebKitInspector(RealmInspectorModulesProvider.wrap(
-                                this,
-                                Stetho.defaultInspectorModulesProvider(this)))
+                        .enableWebKitInspector(RealmInspectorModulesProvider.builder(this).build())
                         .build());
     }
 }
 ```
 
-You can use `RealmInspectorModulesProvider.wrap(Context,InspectorModulesProvider,boolean)`
-to specify whether Stetho displays metadata tables. They are not displayed by default.
+By calling some methods in `RealmInspectorModulesProvider.ProviderBuilder`,
+you can include metadata table in table list, and can provide database file name pattern.
 
 ```java
-    RealmInspectorModulesProvider.wrap(
-                                this,
-                                Stetho.defaultInspectorModulesProvider(this),
-                                true)
+    RealmInspectorModulesProvider.builder(this)
+            .withMetaTables()
+            .databaseNamePattern(Pattern.compile(".+\\.realm"))
+            .build()
 ```
 
 ## License
