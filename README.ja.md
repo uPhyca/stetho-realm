@@ -49,7 +49,7 @@ public class MyApplication extends Application {
 ```
 
 `RealmInspectorModulesProvider.ProviderBuilder` の各種メソッドを呼び出すことで、メタデータのテーブル
-(Realm 0.80.1 では pk と metadataテーブル)の情報を表示するかどうかや、データベースファイル名のパターンを
+(Realm 0.80.2 では pk と metadataテーブル)の情報を表示するかどうかや、データベースファイル名のパターンを
 指定することができます。
 
 ```java
