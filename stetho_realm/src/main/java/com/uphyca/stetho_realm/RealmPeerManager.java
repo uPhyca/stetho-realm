@@ -132,7 +132,8 @@ public class RealmPeerManager extends ChromePeerManager {
     }
 
     private Realm openDatabase(String databaseId) {
-        return Realm.getInstance(context, new File(databaseId).getName());
+        String databaseFileName = new File(databaseId).getName();
+        return Realm.getInstance(context, databaseFileName, realmFilesProvider.getEncryptionKey(databaseFileName));
     }
 
     public interface ExecuteResultHandler<T> {
