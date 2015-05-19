@@ -148,10 +148,28 @@ public class Database implements ChromeDevtoolsDomain {
                         flatList.add(rowData.getBinaryByteArray(column));
                         break;
                     case FLOAT:
-                        flatList.add(rowData.getFloat(column));
+                        final float aFloat = rowData.getFloat(column);
+                        if (Float.isNaN(aFloat)) {
+                            flatList.add("NaN");
+                        } else if (aFloat == Float.POSITIVE_INFINITY) {
+                            flatList.add("Infinity");
+                        } else if (aFloat == Float.NEGATIVE_INFINITY) {
+                            flatList.add("-Infinity");
+                        } else {
+                            flatList.add(aFloat);
+                        }
                         break;
                     case DOUBLE:
-                        flatList.add(rowData.getDouble(column));
+                        final double aDouble = rowData.getDouble(column);
+                        if (Double.isNaN(aDouble)) {
+                            flatList.add("NaN");
+                        } else if (aDouble == Double.POSITIVE_INFINITY) {
+                            flatList.add("Infinity");
+                        } else if (aDouble == Double.NEGATIVE_INFINITY) {
+                            flatList.add("-Infinity");
+                        } else {
+                            flatList.add(aDouble);
+                        }
                         break;
                     case DATE:
                         flatList.add(rowData.getDate(column));
