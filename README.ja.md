@@ -16,7 +16,7 @@ repositories {
 }
 
 dependencies {
-    compile 'com.uphyca:stetho_realm:0.4.2'
+    compile 'com.uphyca:stetho_realm:0.4.3'
 }
 ```
 
