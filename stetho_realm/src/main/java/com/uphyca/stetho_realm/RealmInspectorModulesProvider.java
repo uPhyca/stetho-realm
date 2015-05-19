@@ -7,7 +7,9 @@ import com.facebook.stetho.Stetho;
 import com.facebook.stetho.inspector.protocol.ChromeDevtoolsDomain;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
@@ -49,18 +51,29 @@ public class RealmInspectorModulesProvider implements InspectorModulesProvider {
                                                 InspectorModulesProvider provider,
                                                 boolean withMetaTables,
                                                 Pattern databaseNamePattern) {
-        return new RealmInspectorModulesProvider(context, provider, withMetaTables, databaseNamePattern);
+        return wrap(context, provider, withMetaTables, databaseNamePattern, null);
+    }
+
+    @Deprecated
+    public static RealmInspectorModulesProvider wrap(Context context,
+                                                InspectorModulesProvider provider,
+                                                boolean withMetaTables,
+                                                Pattern databaseNamePattern,
+                                                Map<String, byte[]> encryptionKey) {
+        return new RealmInspectorModulesProvider(context, provider, withMetaTables, databaseNamePattern, encryptionKey);
     }
 
     private final Context context;
     private final InspectorModulesProvider baseProvider;
     private final boolean withMetaTables;
     private final Pattern databaseNamePattern;
+    private final Map<String, byte[]> encryptionKey;
 
     private RealmInspectorModulesProvider(Context context,
                                           InspectorModulesProvider baseProvider,
                                           boolean withMetaTables,
-                                          Pattern databaseNamePattern) {
+                                          Pattern databaseNamePattern,
+                                          Map<String, byte[]> encryptionKey) {
         this.context = context.getApplicationContext();
         this.baseProvider = baseProvider;
         this.withMetaTables = withMetaTables;
@@ -69,6 +82,7 @@ public class RealmInspectorModulesProvider implements InspectorModulesProvider {
         } else {
             this.databaseNamePattern = databaseNamePattern;
         }
+        this.encryptionKey = encryptionKey;
     }
 
     @Override
@@ -82,7 +96,7 @@ public class RealmInspectorModulesProvider implements InspectorModulesProvider {
         }
         modules.add(new com.uphyca.stetho_realm.Database(
                 context,
-                new RealmFilesProvider(context, databaseNamePattern),
+                new RealmFilesProvider(context, databaseNamePattern, encryptionKey),
                 withMetaTables));
         return modules;
     }
@@ -97,6 +111,7 @@ public class RealmInspectorModulesProvider implements InspectorModulesProvider {
         private InspectorModulesProvider baseProvider;
         private boolean withMetaTables;
         private Pattern databaseNamePattern;
+        private Map<String, byte[]> encryptionKey;
 
         public ProviderBuilder(Context context) {
             applicationContext = context.getApplicationContext();
@@ -117,6 +132,14 @@ public class RealmInspectorModulesProvider implements InspectorModulesProvider {
             return this;
         }
 
+        public ProviderBuilder encryptionKey(String databaseFileName, byte[] encryptionKeyBytes) {
+            if (encryptionKey == null) {
+                encryptionKey = new HashMap<>();
+            }
+            encryptionKey.put(databaseFileName, encryptionKeyBytes);
+            return this;
+        }
+
         public RealmInspectorModulesProvider build() {
             final InspectorModulesProvider baseProvider =
                     (this.baseProvider != null)
@@ -127,7 +150,8 @@ public class RealmInspectorModulesProvider implements InspectorModulesProvider {
                     applicationContext,
                     baseProvider,
                     withMetaTables,
-                    databaseNamePattern);
+                    databaseNamePattern,
+                    encryptionKey);
         }
     }
 }

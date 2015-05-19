@@ -8,15 +8,18 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 public class RealmFilesProvider implements DatabaseFilesProvider {
     private final Context context;
     private final Pattern databaseNamePattern;
+    private final Map<String, byte[]> encryptionKey;
 
-    public RealmFilesProvider(Context context, Pattern databaseNamePattern) {
+    public RealmFilesProvider(Context context, Pattern databaseNamePattern, Map<String, byte[]> encryptionKey) {
         this.context = context;
         this.databaseNamePattern = databaseNamePattern;
+        this.encryptionKey = encryptionKey;
     }
 
     @Override
@@ -44,5 +47,9 @@ public class RealmFilesProvider implements DatabaseFilesProvider {
         }
 
         return files;
+    }
+
+    public byte[] getEncryptionKey(String fileName) {
+        return encryptionKey != null ? encryptionKey.get(fileName) : null;
     }
 }
