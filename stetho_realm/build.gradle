@@ -6,7 +6,7 @@ android {
     buildToolsVersion "22.0.1"
 
     defaultConfig {
-        minSdkVersion 11
+        minSdkVersion 10
         targetSdkVersion 22
         versionCode 8
         versionName "0.4.3"
@@ -24,8 +24,8 @@ android {
 }
 
 dependencies {
-    compile 'com.facebook.stetho:stetho:1.1.0'
-    compile 'io.realm:realm-android:0.80.1'
+    compile 'com.facebook.stetho:stetho:1.1.1'
+    compile 'io.realm:realm-android:0.80.3'
 }
 
 //noinspection GroovyAssignabilityCheck
