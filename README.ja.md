@@ -65,7 +65,6 @@ Stetho-Realm is BSD-licensed.
 ## TODO
 
 * SQLite モジュールとの共存
-* Realm データベースに Migration が必要な場合の動作確認とエラー処理
 * 読み込み以外の実装
 
 ## deployメモ
