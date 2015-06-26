@@ -22,10 +22,15 @@ import com.facebook.stetho.json.annotation.JsonProperty;
 
 import org.json.JSONObject;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 
+import io.realm.internal.ColumnType;
+import io.realm.internal.LinkView;
 import io.realm.internal.Row;
 import io.realm.internal.Table;
 
@@ -128,8 +133,9 @@ public class Database implements ChromeDevtoolsDomain {
         final List<Object> flatList = new ArrayList<>();
         long numColumns = table.getColumnCount();
 
+        final RowFetcher rowFetcher = RowFetcher.getInstance();
         for (long row = 0; row < limit && row < table.size(); row++) {
-            final Row rowData = table.getRow(row);
+            final RowWrapper rowData = RowWrapper.wrap(rowFetcher.getRow(table, row));
             if (addRowIndex) {
                 flatList.add(rowData.getIndex());
             }
@@ -251,4 +257,328 @@ public class Database implements ChromeDevtoolsDomain {
         @JsonProperty(required = true)
         public int code;
     }
+
+
+    private abstract static class RowFetcher {
+        private static RowFetcher sInstance;
+
+        static {
+            try {
+                Table.class.getMethod("getCheckedRow", Long.TYPE);
+                sInstance = new RowFetcherFor_0_81();
+            } catch (NoSuchMethodException e) {
+                sInstance = new RowFetcherFor_0_80();
+            }
+        }
+
+        public static RowFetcher getInstance() {
+            return sInstance;
+        }
+
+        RowFetcher() {
+        }
+
+        public abstract Row getRow(Table targetTable, long index);
+    }
+
+    private static final class RowFetcherFor_0_80 extends RowFetcher {
+        private final Method getRowMethod;
+
+        RowFetcherFor_0_80() {
+            try {
+                getRowMethod = Table.class.getMethod("getRow", Long.TYPE);
+            } catch (NoSuchMethodException e) {
+                throw new RuntimeException("getRow method not found in Table class.");
+            }
+        }
+
+        @Override
+        public Row getRow(Table targetTable, long index) {
+            try {
+                return (Row) getRowMethod.invoke(targetTable, index);
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            } catch (InvocationTargetException e) {
+                throw new RuntimeException(e.getTargetException());
+            }
+        }
+    }
+
+    private static final class RowFetcherFor_0_81 extends RowFetcher {
+        @Override
+        public Row getRow(Table targetTable, long index) {
+            return targetTable.getCheckedRow(index);
+        }
+    }
+
+    private abstract static class RowWrapper {
+        private static final boolean s0_81_OR_NEWER;
+
+        static {
+            s0_81_OR_NEWER = Row.class.isInterface();
+        }
+
+        public static RowWrapper wrap(Row row) {
+            if (s0_81_OR_NEWER) {
+                return new RowWrapper_0_81(row);
+            } else {
+                return new RowWrapper_0_80(row);
+            }
+        }
+
+        protected RowWrapper() {
+        }
+
+        public abstract long getIndex();
+
+        public abstract ColumnType getColumnType(long columnIndex);
+
+        public abstract long getLong(long columnIndex);
+
+        public abstract boolean getBoolean(long columnIndex);
+
+        public abstract float getFloat(long columnIndex);
+
+        public abstract double getDouble(long columnIndex);
+
+        public abstract Date getDate(long columnIndex);
+
+        public abstract String getString(long columnIndex);
+
+        public abstract byte[] getBinaryByteArray(long columnIndex);
+
+        public abstract long getLink(long columnIndex);
+
+        public abstract LinkView getLinkList(long columnIndex);
+
+    }
+
+    private static final class RowWrapper_0_80 extends RowWrapper {
+
+        /*
+         * 0.81 でビルドされているので Row は interface だが、 0.80 では class なので
+         * 直接メソッド呼び出しを行うとうまくいかない(interface のメソッド呼び出しの
+         * 命令は invokeinterface だが、クラスは invokevirtual)。
+         * そこで、0_80 ではリフレクションで呼び出しを行うので Object型で保持しておく(うっかり呼ばないように)。
+         */
+        private final Object row;
+
+        private Method getIndexMethod;
+        private Method getColumnTypeMethod;
+        private Method getLongMethod;
+        private Method getBooleanMethod;
+        private Method getFloatMethod;
+        private Method getDoubleMethod;
+        private Method getDateMethod;
+        private Method getStringMethod;
+        private Method getBinaryByteArrayMethod;
+        private Method getLinkMethod;
+        private Method getLinkListMethod;
+
+        RowWrapper_0_80(Row row) {
+            this.row = row;
+
+            try {
+                final Class<? extends Row> aClass = row.getClass();
+                getIndexMethod = aClass.getMethod("getIndex");
+                getColumnTypeMethod = aClass.getMethod("getColumnType", Long.TYPE);
+                getLongMethod = aClass.getMethod("getLong", Long.TYPE);
+                getBooleanMethod = aClass.getMethod("getBoolean", Long.TYPE);
+                getFloatMethod = aClass.getMethod("getFloat", Long.TYPE);
+                getDoubleMethod = aClass.getMethod("getDouble", Long.TYPE);
+                getDateMethod = aClass.getMethod("getDate", Long.TYPE);
+                getStringMethod = aClass.getMethod("getString", Long.TYPE);
+                getBinaryByteArrayMethod = aClass.getMethod("getBinaryByteArray", Long.TYPE);
+                getLinkMethod = aClass.getMethod("getLink", Long.TYPE);
+                getLinkListMethod = aClass.getMethod("getLinkList", Long.TYPE);
+            } catch (NoSuchMethodException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        @Override
+        public long getIndex() {
+            try {
+                return (long) getIndexMethod.invoke(row);
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            } catch (InvocationTargetException e) {
+                throw new RuntimeException(e.getTargetException());
+            }
+        }
+
+        @Override
+        public ColumnType getColumnType(long columnIndex) {
+            try {
+                return (ColumnType) getColumnTypeMethod.invoke(row, columnIndex);
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            } catch (InvocationTargetException e) {
+                throw new RuntimeException(e.getTargetException());
+            }
+        }
+
+        @Override
+        public long getLong(long columnIndex) {
+            try {
+                return (long) getLongMethod.invoke(row, columnIndex);
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            } catch (InvocationTargetException e) {
+                throw new RuntimeException(e.getTargetException());
+            }
+        }
+
+        @Override
+        public boolean getBoolean(long columnIndex) {
+            try {
+                return (boolean) getBooleanMethod.invoke(row, columnIndex);
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            } catch (InvocationTargetException e) {
+                throw new RuntimeException(e.getTargetException());
+            }
+        }
+
+        @Override
+        public float getFloat(long columnIndex) {
+            try {
+                return (float) getFloatMethod.invoke(row, columnIndex);
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            } catch (InvocationTargetException e) {
+                throw new RuntimeException(e.getTargetException());
+            }
+        }
+
+        @Override
+        public double getDouble(long columnIndex) {
+            try {
+                return (double) getDoubleMethod.invoke(row, columnIndex);
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            } catch (InvocationTargetException e) {
+                throw new RuntimeException(e.getTargetException());
+            }
+        }
+
+        @Override
+        public Date getDate(long columnIndex) {
+            try {
+                return (Date) getDateMethod.invoke(row, columnIndex);
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            } catch (InvocationTargetException e) {
+                throw new RuntimeException(e.getTargetException());
+            }
+        }
+
+        @Override
+        public String getString(long columnIndex) {
+            try {
+                return (String) getStringMethod.invoke(row, columnIndex);
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            } catch (InvocationTargetException e) {
+                throw new RuntimeException(e.getTargetException());
+            }
+        }
+
+        @Override
+        public byte[] getBinaryByteArray(long columnIndex) {
+            try {
+                return (byte[]) getBinaryByteArrayMethod.invoke(row, columnIndex);
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            } catch (InvocationTargetException e) {
+                throw new RuntimeException(e.getTargetException());
+            }
+        }
+
+        @Override
+        public long getLink(long columnIndex) {
+            try {
+                return (long) getLinkMethod.invoke(row, columnIndex);
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            } catch (InvocationTargetException e) {
+                throw new RuntimeException(e.getTargetException());
+            }
+        }
+
+        @Override
+        public LinkView getLinkList(long columnIndex) {
+            try {
+                return (LinkView) getLinkListMethod.invoke(row, columnIndex);
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            } catch (InvocationTargetException e) {
+                throw new RuntimeException(e.getTargetException());
+            }
+        }
+    }
+
+    private static final class RowWrapper_0_81 extends RowWrapper {
+        private final Row row;
+
+        RowWrapper_0_81(Row row) {
+            this.row = row;
+        }
+
+        @Override
+        public long getIndex() {
+            return row.getIndex();
+        }
+
+        @Override
+        public ColumnType getColumnType(long columnIndex) {
+            return row.getColumnType(columnIndex);
+        }
+
+        @Override
+        public long getLong(long columnIndex) {
+            return row.getLong(columnIndex);
+        }
+
+        @Override
+        public boolean getBoolean(long columnIndex) {
+            return row.getBoolean(columnIndex);
+        }
+
+        @Override
+        public float getFloat(long columnIndex) {
+            return row.getFloat(columnIndex);
+        }
+
+        @Override
+        public double getDouble(long columnIndex) {
+            return row.getDouble(columnIndex);
+        }
+
+        @Override
+        public Date getDate(long columnIndex) {
+            return row.getDate(columnIndex);
+        }
+
+        @Override
+        public String getString(long columnIndex) {
+            return row.getString(columnIndex);
+        }
+
+        @Override
+        public byte[] getBinaryByteArray(long columnIndex) {
+            return row.getBinaryByteArray(columnIndex);
+        }
+
+        @Override
+        public long getLink(long columnIndex) {
+            return row.getLong(columnIndex);
+        }
+
+        @Override
+        public LinkView getLinkList(long columnIndex) {
+            return row.getLinkList(columnIndex);
+        }
+    }
+
 }

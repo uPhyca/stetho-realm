@@ -24,8 +24,8 @@ android {
 }
 
 dependencies {
-    compile 'com.facebook.stetho:stetho:1.1.0'
-    compile 'io.realm:realm-android:0.80.1'
+    provided 'com.facebook.stetho:stetho:1.1.1'
+    provided 'io.realm:realm-android:0.81.1'
 }
 
 //noinspection GroovyAssignabilityCheck

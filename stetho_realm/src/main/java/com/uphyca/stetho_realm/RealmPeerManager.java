@@ -8,14 +8,13 @@ import com.facebook.stetho.inspector.helper.PeerRegistrationListener;
 import com.facebook.stetho.inspector.jsonrpc.JsonRpcPeer;
 
 import java.io.File;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import io.realm.Realm;
 import io.realm.internal.ImplicitTransaction;
+import io.realm.internal.SharedGroup;
 import io.realm.internal.Table;
 
 public class RealmPeerManager extends ChromePeerManager {
@@ -43,12 +42,10 @@ public class RealmPeerManager extends ChromePeerManager {
     public List<String> getDatabaseTableNames(String databaseId, boolean withMetaTables) {
         final List<String> tableNames = new ArrayList<>();
 
-        final Realm realm = openDatabase(databaseId);
+        final SharedGroup group = openSharedGroupForImplicitTransactions(databaseId);
         //noinspection TryWithIdenticalCatches,TryFinallyCanBeTryWithResources
         try {
-            final Field transactionField = realm.getClass().getDeclaredField("transaction");
-            transactionField.setAccessible(true);
-            final ImplicitTransaction transaction = (ImplicitTransaction) transactionField.get(realm);
+            final ImplicitTransaction transaction = group.beginImplicitTransaction();
 
             for (int i = 0; i < transaction.size(); i++) {
                 final String tableName = transaction.getTableName(i);
@@ -56,12 +53,8 @@ public class RealmPeerManager extends ChromePeerManager {
                     tableNames.add(tableName);
                 }
             }
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
-        } catch (NoSuchFieldException e) {
-            throw new RuntimeException(e);
         } finally {
-            realm.close();
+            group.close();
         }
 
         return tableNames;
@@ -103,12 +96,10 @@ public class RealmPeerManager extends ChromePeerManager {
     private static final Pattern SELECT_PATTERN = Pattern.compile("SELECT[ \\t]+rowid,[ \\t]+\\*[ \\t]+FROM \"([^\"]+)\"");
 
     public <T> T executeSQL(String databaseId, String query, RealmPeerManager.ExecuteResultHandler<T> executeResultHandler) {
-        final Realm realm = openDatabase(databaseId);
+        final SharedGroup group = openSharedGroupForImplicitTransactions(databaseId);
         //noinspection TryWithIdenticalCatches,TryFinallyCanBeTryWithResources
         try {
-            final Field transactionField = realm.getClass().getDeclaredField("transaction");
-            transactionField.setAccessible(true);
-            final ImplicitTransaction transaction = (ImplicitTransaction) transactionField.get(realm);
+            final ImplicitTransaction transaction = group.beginImplicitTransaction();
 
             query = query.trim();
 
@@ -122,17 +113,13 @@ public class RealmPeerManager extends ChromePeerManager {
 
             // TODO 読み出し以外にも対応する
             return null;
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
-        } catch (NoSuchFieldException e) {
-            throw new RuntimeException(e);
         } finally {
-            realm.close();
+            group.close();
         }
     }
 
-    private Realm openDatabase(String databaseId) {
-        return Realm.getInstance(context, new File(databaseId).getName());
+    private SharedGroup openSharedGroupForImplicitTransactions(String databaseId) {
+        return new SharedGroup(databaseId, true, null);
     }
 
     public interface ExecuteResultHandler<T> {
