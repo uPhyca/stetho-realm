@@ -572,7 +572,7 @@ public class Database implements ChromeDevtoolsDomain {
 
         @Override
         public long getLink(long columnIndex) {
-            return row.getLong(columnIndex);
+            return row.getLink(columnIndex);
         }
 
         @Override
