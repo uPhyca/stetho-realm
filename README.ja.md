@@ -20,6 +20,8 @@ dependencies {
 }
 ```
 
+Stetho-Realm は、 Stetho 1.1以降、Realm 0.80.0 以降に対応しています。
+
 ### アプリケーションへの組み込み
 `Application` クラスで以下のように Stetho の初期化を行ってください。
 
@@ -59,7 +61,14 @@ public class MyApplication extends Application {
             .build()
 ```
 
+## デバッグビルドのみに Stetho を組み込む方法
+
+英語ですが以下のページを参考にしてください。
+
+http://littlerobots.nl/blog/stetho-for-android-debug-builds-only/
+
 ## License
+
 Stetho-Realm is BSD-licensed.
 
 ## TODO

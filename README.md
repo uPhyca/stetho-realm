@@ -20,6 +20,8 @@ dependencies {
 }
 ```
 
+Stetho-Realm supports Stetho 1.1 or newer and Realm 0.80.0 or newer.
+
 ### Integration
 In your `Application` class, please initialize Stetho with `RealmInspectorModulesProvider.ProviderBuilder` as follows.
 
@@ -53,7 +55,12 @@ you can include metadata table in table list, and can provide database file name
             .build()
 ```
 
+## use with debug build only
+
+http://littlerobots.nl/blog/stetho-for-android-debug-builds-only/
+
 ## License
+
 Stetho-Realm is BSD-licensed.
 
 ## TODO
