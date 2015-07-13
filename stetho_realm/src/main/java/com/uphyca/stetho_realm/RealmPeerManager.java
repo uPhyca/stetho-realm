@@ -1,6 +1,5 @@
 package com.uphyca.stetho_realm;
 
-import android.content.Context;
 import android.database.sqlite.SQLiteException;
 
 import com.facebook.stetho.inspector.helper.ChromePeerManager;
@@ -10,6 +9,7 @@ import com.facebook.stetho.inspector.jsonrpc.JsonRpcPeer;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -20,12 +20,19 @@ import io.realm.internal.Table;
 public class RealmPeerManager extends ChromePeerManager {
     private static final String TABLE_PREFIX = "class_"; // Realm#TABLE_PREFIX
 
-    private final Context context;
+    private final String packageName;
     private final RealmFilesProvider realmFilesProvider;
+    private byte[] defaultEncryptionKey;
+    private Map<String, byte[]> encryptionKeys;
 
-    public RealmPeerManager(Context context, RealmFilesProvider filesProvider) {
-        this.context = context;
+    public RealmPeerManager(String packageName,
+                            RealmFilesProvider filesProvider,
+                            byte[] defaultEncryptionKey,
+                            Map<String, byte[]> encryptionKeys) {
+        this.packageName = packageName;
         this.realmFilesProvider = filesProvider;
+        this.defaultEncryptionKey = defaultEncryptionKey;
+        this.encryptionKeys = encryptionKeys;
 
         setListener(new PeerRegistrationListener() {
             @Override
@@ -67,7 +74,7 @@ public class RealmPeerManager extends ChromePeerManager {
             Database.DatabaseObject databaseParams = new Database.DatabaseObject();
             databaseParams.id = database.getPath();
             databaseParams.name = database.getName();
-            databaseParams.domain = context.getPackageName();
+            databaseParams.domain = packageName;
             databaseParams.version = "N/A";
             Database.AddDatabaseEvent eventParams = new Database.AddDatabaseEvent();
             eventParams.database = databaseParams;
@@ -119,7 +126,16 @@ public class RealmPeerManager extends ChromePeerManager {
     }
 
     private SharedGroup openSharedGroupForImplicitTransactions(String databaseId) {
-        return new SharedGroup(databaseId, true, null);
+        final byte[] encryptionKey = getEncryptionKey(databaseId);
+        return new SharedGroup(databaseId, true, encryptionKey);
+    }
+
+    private byte[] getEncryptionKey(String databaseId) {
+        final String databaseName = new File(databaseId).getName();
+        if (encryptionKeys.containsKey(databaseName)) { // value が null の場合があるので getではダメ
+            return encryptionKeys.get(databaseName);
+        }
+        return defaultEncryptionKey;
     }
 
     public interface ExecuteResultHandler<T> {

@@ -50,13 +50,18 @@ public class MyApplication extends Application {
 }
 ```
 
-`RealmInspectorModulesProvider.ProviderBuilder` の各種メソッドを呼び出すことで、メタデータのテーブル
-(Realm 0.80.2 では pk と metadataテーブル)の情報を表示するかどうかや、データベースファイル名のパターンを
-指定することができます。
+`RealmInspectorModulesProvider.ProviderBuilder` の各種メソッドを呼び出すことで、データベースファイルを
+探すフォルダの指定、表示する件数の上限、表示をidの昇順にする加か降順にするか、メタデータのテーブル
+(Realm 0.80.2 では pk と metadataテーブル)の情報を表示するかどうか、復号に使用するキー、
+データベースファイル名のパターンを指定することができます。
 
 ```java
     RealmInspectorModulesProvider.builder(this)
+            .withFolder(getCacheDir())
+            .withEncryptionKey("encrypted.realm", key)
             .withMetaTables()
+            .withDescendingOrder()
+            .withLimit(1000)
             .databaseNamePattern(Pattern.compile(".+\\.realm"))
             .build()
 ```

@@ -1,7 +1,5 @@
 package com.uphyca.stetho_realm;
 
-import android.content.Context;
-
 import com.facebook.stetho.inspector.database.DatabaseFilesProvider;
 
 import java.io.File;
@@ -11,18 +9,18 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 public class RealmFilesProvider implements DatabaseFilesProvider {
-    private final Context context;
+    private final File folder;
     private final Pattern databaseNamePattern;
 
-    public RealmFilesProvider(Context context, Pattern databaseNamePattern) {
-        this.context = context;
+    public RealmFilesProvider(File folder, Pattern databaseNamePattern) {
+        this.folder = folder;
         this.databaseNamePattern = databaseNamePattern;
     }
 
     @Override
     public List<File> getDatabaseFiles() {
 
-        final File baseDir = context.getFilesDir();
+        final File baseDir = folder;
         final String[] realmFiles = baseDir.list(new FilenameFilter() {
             @Override
             public boolean accept(File dir, String filename) {

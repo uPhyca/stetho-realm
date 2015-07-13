@@ -9,7 +9,6 @@
 
 package com.uphyca.stetho_realm;
 
-import android.content.Context;
 import android.database.sqlite.SQLiteException;
 
 import com.facebook.stetho.common.Util;
@@ -28,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 import io.realm.internal.ColumnType;
 import io.realm.internal.LinkView;
@@ -35,21 +35,39 @@ import io.realm.internal.Row;
 import io.realm.internal.Table;
 
 public class Database implements ChromeDevtoolsDomain {
-    private static final int MAX_EXECUTE_RESULTS = 250;
 
     private final RealmPeerManager realmPeerManager;
     private final ObjectMapper objectMapper;
     private final boolean withMetaTables;
+    private final long limit;
+    private final boolean ascendingOrder;
 
-    @SuppressWarnings("unused")
-    public Database(Context context, RealmFilesProvider filesProvider) {
-        this(context, filesProvider, false);
-    }
-
-    public Database(Context context, RealmFilesProvider filesProvider, boolean withMetaTables) {
-        this.realmPeerManager = new RealmPeerManager(context, filesProvider);
+    /**
+     * 指定されたパラメータで {@link Database}インスタンスを構築します。
+     *
+     * @param packageName          アプリケーションのパッケージネーム(application ID)。
+     * @param filesProvider        {@link RealmFilesProvider} インスタンス。
+     * @param withMetaTables       テーブル一覧にmeta テーブルを含めるかどうか。
+     * @param limit                返却するデータの最大行数
+     * @param ascendingOrder       {@code true}ならデータを id列の昇順に、{@code false}なら降順に返します。
+     * @param defaultEncryptionKey データベースの復号に使用するキー。
+     *                             {@code null} の場合は暗号化されていないものとして扱います。
+     *                             また、 {@code encryptionKeys} で個別のキーが指定されている
+     *                             データベースについては {@code encryptionKeys}の指定が優先されます。
+     * @param encryptionKeys       データベース個別のキーを指定するマップ。
+     */
+    Database(String packageName,
+             RealmFilesProvider filesProvider,
+             boolean withMetaTables,
+             long limit,
+             boolean ascendingOrder,
+             byte[] defaultEncryptionKey,
+             Map<String, byte[]> encryptionKeys) {
+        this.realmPeerManager = new RealmPeerManager(packageName, filesProvider, defaultEncryptionKey, encryptionKeys);
         this.objectMapper = new ObjectMapper();
         this.withMetaTables = withMetaTables;
+        this.limit = limit;
+        this.ascendingOrder = ascendingOrder;
     }
 
     @ChromeDevtoolsMethod
@@ -100,7 +118,7 @@ public class Database implements ChromeDevtoolsDomain {
                             }
 
                             response.columnNames = columnNames;
-                            response.values = flattenRows(table, MAX_EXECUTE_RESULTS, addRowIndex);
+                            response.values = flattenRows(table, limit, addRowIndex);
                             return response;
                         }
 
@@ -128,13 +146,15 @@ public class Database implements ChromeDevtoolsDomain {
         }
     }
 
-    private List<Object> flattenRows(Table table, int limit, boolean addRowIndex) {
+    private List<Object> flattenRows(Table table, long limit, boolean addRowIndex) {
         Util.throwIfNot(limit >= 0);
         final List<Object> flatList = new ArrayList<>();
         long numColumns = table.getColumnCount();
 
         final RowFetcher rowFetcher = RowFetcher.getInstance();
-        for (long row = 0; row < limit && row < table.size(); row++) {
+        final long tableSize = table.size();
+        for (long index = 0; index < limit && index < tableSize; index++) {
+            final long row = ascendingOrder ? index : (tableSize - index - 1);
             final RowWrapper rowData = RowWrapper.wrap(rowFetcher.getRow(table, row));
             if (addRowIndex) {
                 flatList.add(rowData.getIndex());

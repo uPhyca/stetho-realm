@@ -47,10 +47,15 @@ public class MyApplication extends Application {
 
 By calling some methods in `RealmInspectorModulesProvider.ProviderBuilder`,
 you can include metadata table in table list, and can provide database file name pattern.
+And also you can specify base folder for database files, encryption keys, limit, sort order.
 
 ```java
     RealmInspectorModulesProvider.builder(this)
+            .withFolder(getCacheDir())
+            .withEncryptionKey("encrypted.realm", key)
             .withMetaTables()
+            .withDescendingOrder()
+            .withLimit(1000)
             .databaseNamePattern(Pattern.compile(".+\\.realm"))
             .build()
 ```
