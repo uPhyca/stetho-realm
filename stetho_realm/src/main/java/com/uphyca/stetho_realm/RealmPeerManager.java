@@ -7,6 +7,8 @@ import com.facebook.stetho.inspector.helper.PeerRegistrationListener;
 import com.facebook.stetho.inspector.jsonrpc.JsonRpcPeer;
 
 import java.io.File;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -127,7 +129,34 @@ public class RealmPeerManager extends ChromePeerManager {
 
     private SharedGroup openSharedGroupForImplicitTransactions(String databaseId) {
         final byte[] encryptionKey = getEncryptionKey(databaseId);
-        return new SharedGroup(databaseId, true, encryptionKey);
+
+        //noinspection TryWithIdenticalCatches
+        try {
+            try {
+                // 0.82.* or later
+                final Constructor<SharedGroup> constructor = SharedGroup.class.getConstructor(String.class, Boolean.TYPE, SharedGroup.Durability.class, byte[].class);
+                return constructor.newInstance(databaseId, true, SharedGroup.Durability.FULL, encryptionKey);
+            } catch (NoSuchMethodException e) {
+                // 0.80.*, 0.81.*
+                final Constructor<SharedGroup> constructor = SharedGroup.class.getConstructor(String.class, Boolean.TYPE, byte[].class);
+                return constructor.newInstance(databaseId, true, encryptionKey);
+            }
+        } catch (NoSuchMethodException e) {
+            throw new RuntimeException(e);
+        } catch (InstantiationException e) {
+            throw new RuntimeException(e);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
+        } catch (InvocationTargetException e) {
+            final Throwable targetException = e.getTargetException();
+            if (targetException instanceof Error) {
+                throw (Error) targetException;
+            }
+            if (targetException instanceof RuntimeException) {
+                throw (RuntimeException) targetException;
+            }
+            throw new RuntimeException(targetException);
+        }
     }
 
     private byte[] getEncryptionKey(String databaseId) {
