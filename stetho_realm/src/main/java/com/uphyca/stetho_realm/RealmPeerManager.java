@@ -15,6 +15,9 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.annotation.Nullable;
+
+import io.realm.exceptions.RealmError;
 import io.realm.internal.ImplicitTransaction;
 import io.realm.internal.SharedGroup;
 import io.realm.internal.Table;
@@ -128,6 +131,11 @@ public class RealmPeerManager extends ChromePeerManager {
     }
 
     private SharedGroup openSharedGroupForImplicitTransactions(String databaseId) {
+        return openSharedGroupForImplicitTransactions(databaseId, null);
+    }
+
+    private SharedGroup openSharedGroupForImplicitTransactions(String databaseId,
+                                                               @Nullable SharedGroup.Durability durability) {
         final byte[] encryptionKey = getEncryptionKey(databaseId);
 
         //noinspection TryWithIdenticalCatches
@@ -135,7 +143,10 @@ public class RealmPeerManager extends ChromePeerManager {
             try {
                 // 0.82.* or later
                 final Constructor<SharedGroup> constructor = SharedGroup.class.getConstructor(String.class, Boolean.TYPE, SharedGroup.Durability.class, byte[].class);
-                return constructor.newInstance(databaseId, true, SharedGroup.Durability.FULL, encryptionKey);
+                return constructor.newInstance(databaseId,
+                        true,
+                        durability != null ? durability : SharedGroup.Durability.FULL,
+                        encryptionKey);
             } catch (NoSuchMethodException e) {
                 // 0.80.*, 0.81.*
                 final Constructor<SharedGroup> constructor = SharedGroup.class.getConstructor(String.class, Boolean.TYPE, byte[].class);
@@ -149,6 +160,14 @@ public class RealmPeerManager extends ChromePeerManager {
             throw new RuntimeException(e);
         } catch (InvocationTargetException e) {
             final Throwable targetException = e.getTargetException();
+
+            if (durability == null) {
+                final Class<?> realmErrorClass = getRealmErrorClass();
+                if (realmErrorClass != null && realmErrorClass.isInstance(targetException)) {
+                    // Durability 未指定でRealmErrorが出た時は、MEM_ONLY も試してみる
+                    return openSharedGroupForImplicitTransactions(databaseId, SharedGroup.Durability.MEM_ONLY);
+                }
+            }
             if (targetException instanceof Error) {
                 throw (Error) targetException;
             }
@@ -156,6 +175,14 @@ public class RealmPeerManager extends ChromePeerManager {
                 throw (RuntimeException) targetException;
             }
             throw new RuntimeException(targetException);
+        }
+    }
+
+    private Class<?> getRealmErrorClass() {
+        try {
+            return Class.forName("io.realm.exceptions.RealmError");
+        } catch (ClassNotFoundException e) {
+            return null;
         }
     }
 
