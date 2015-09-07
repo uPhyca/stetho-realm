@@ -61,7 +61,7 @@ And also you can specify base folder for database files, encryption keys, limit,
             .build()
 ```
 
-## use with debug build only
+## use Stetho in debug build only
 
 http://littlerobots.nl/blog/stetho-for-android-debug-builds-only/
 
