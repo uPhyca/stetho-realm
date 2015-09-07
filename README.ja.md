@@ -16,6 +16,7 @@ repositories {
 }
 
 dependencies {
+    compile 'com.facebook.stetho:stetho:1.1.1'
     compile 'com.uphyca:stetho_realm:0.7.1'
 }
 ```
