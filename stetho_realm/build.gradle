@@ -24,7 +24,7 @@ android {
 }
 
 dependencies {
-    provided 'com.facebook.stetho:stetho:1.1.1'
+    provided 'com.facebook.stetho:stetho:1.2.0'
     provided 'io.realm:realm-android:0.82.2'
 }
 
