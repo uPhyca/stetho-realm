@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="UTF-8">
+    <title>Stetho-realm by uPhyca</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+  </head>
+  <body>
+    <section class="page-header">
+      <h1 class="project-name">Stetho-realm</h1>
+      <h2 class="project-tagline">Realm module for Stetho</h2>
+      <a href="https://github.com/uPhyca/stetho-realm" class="btn">View on GitHub</a>
+      <a href="https://github.com/uPhyca/stetho-realm/zipball/master" class="btn">Download .zip</a>
+      <a href="https://github.com/uPhyca/stetho-realm/tarball/master" class="btn">Download .tar.gz</a>
+    </section>
+
+    <section class="main-content">
+      <h1>
+<a id="stetho-realm" class="anchor" href="#stetho-realm" aria-hidden="true"><span class="octicon octicon-link"></span></a>Stetho-Realm</h1>
+
+<p>Stetho-Realm is a <a href="https://realm.io/">Realm</a> module for <a href="https://facebook.github.io/stetho">Stetho</a>.</p>
+
+<p>It displays Realm database content in Stetho instead of SQLite database content.</p>
+
+<h2>
+<a id="set-up" class="anchor" href="#set-up" aria-hidden="true"><span class="octicon octicon-link"></span></a>Set-up</h2>
+
+<h3>
+<a id="download" class="anchor" href="#download" aria-hidden="true"><span class="octicon octicon-link"></span></a>Download</h3>
+
+<p>grab via Gradle:</p>
+
+<div class="highlight highlight-source-groovy"><pre>repositories {
+    maven {
+        url <span class="pl-s"><span class="pl-pds">'</span>https://github.com/uPhyca/stetho-realm/raw/master/maven-repo<span class="pl-pds">'</span></span>
+    }
+}
+
+dependencies {
+    compile <span class="pl-s"><span class="pl-pds">'</span>com.facebook.stetho:stetho:1.2.0<span class="pl-pds">'</span></span>
+    compile <span class="pl-s"><span class="pl-pds">'</span>com.uphyca:stetho_realm:0.7.2<span class="pl-pds">'</span></span>
+}</pre></div>
+
+<p>Stetho-Realm supports Stetho 1.1 or newer and Realm 0.80.0 or newer.</p>
+
+<h3>
+<a id="integration" class="anchor" href="#integration" aria-hidden="true"><span class="octicon octicon-link"></span></a>Integration</h3>
+
+<p>In your <code>Application</code> class, please initialize Stetho with <code>RealmInspectorModulesProvider.ProviderBuilder</code> as follows.</p>
+
+<p><code>RealmInspectorModulesProvider.ProviderBuilder</code> replaces SQLite module with Realm module.
+You can use <code>RealmInspectorModulesProvider.ProviderBuilder#baseProvider(InspectorModulesProvider)</code>
+in order to customized <code>InspectorModulesProvider</code> instead of default provider.</p>
+
+<div class="highlight highlight-source-java"><pre><span class="pl-k">public</span> <span class="pl-k">class</span> <span class="pl-en">MyApplication</span> <span class="pl-k">extends</span> <span class="pl-e">Application</span> {
+
+    <span class="pl-k">@Override</span>
+    <span class="pl-k">public</span> <span class="pl-k">void</span> <span class="pl-en">onCreate</span>() {
+        <span class="pl-v">super</span><span class="pl-k">.</span>onCreate();
+
+        <span class="pl-smi">Stetho</span><span class="pl-k">.</span>initialize(
+                <span class="pl-smi">Stetho</span><span class="pl-k">.</span>newInitializerBuilder(<span class="pl-v">this</span>)
+                        .enableDumpapp(<span class="pl-smi">Stetho</span><span class="pl-k">.</span>defaultDumperPluginsProvider(<span class="pl-v">this</span>))
+                        .enableWebKitInspector(<span class="pl-smi">RealmInspectorModulesProvider</span><span class="pl-k">.</span>builder(<span class="pl-v">this</span>)<span class="pl-k">.</span>build())
+                        .build());
+    }
+}</pre></div>
+
+<p>By calling some methods in <code>RealmInspectorModulesProvider.ProviderBuilder</code>,
+you can include metadata table in table list, and can provide database file name pattern.
+And also you can specify base folder for database files, encryption keys, limit, sort order.</p>
+
+<div class="highlight highlight-source-java"><pre>    <span class="pl-smi">RealmInspectorModulesProvider</span><span class="pl-k">.</span>builder(<span class="pl-v">this</span>)
+            .withFolder(getCacheDir())
+            .withEncryptionKey(<span class="pl-s"><span class="pl-pds">"</span>encrypted.realm<span class="pl-pds">"</span></span>, key)
+            .withMetaTables()
+            .withDescendingOrder()
+            .withLimit(<span class="pl-c1">1000</span>)
+            .databaseNamePattern(<span class="pl-smi">Pattern</span><span class="pl-k">.</span>compile(<span class="pl-s"><span class="pl-pds">"</span>.+<span class="pl-cce">\\</span>.realm<span class="pl-pds">"</span></span>))
+            .build()</pre></div>
+
+<h2>
+<a id="use-stetho-in-debug-build-only" class="anchor" href="#use-stetho-in-debug-build-only" aria-hidden="true"><span class="octicon octicon-link"></span></a>use Stetho in debug build only</h2>
+
+<p><a href="http://littlerobots.nl/blog/stetho-for-android-debug-builds-only/">http://littlerobots.nl/blog/stetho-for-android-debug-builds-only/</a></p>
+
+<h2>
+<a id="license" class="anchor" href="#license" aria-hidden="true"><span class="octicon octicon-link"></span></a>License</h2>
+
+<p>Stetho-Realm is BSD-licensed.</p>
+
+<h2>
+<a id="todo" class="anchor" href="#todo" aria-hidden="true"><span class="octicon octicon-link"></span></a>TODO</h2>
+
+<ul>
+<li>coexistence with SQLite module.</li>
+<li>implementation of update, delete, etc.</li>
+</ul>
+
+<h2>
+<a id="deployment-memo" class="anchor" href="#deployment-memo" aria-hidden="true"><span class="octicon octicon-link"></span></a>deployment memo</h2>
+
+<ol>
+<li>update version information</li>
+<li>./gradlew clean assemble :stetho_realm:publishMavenPublicationToMavenRepository</li>
+<li>git add, commit, push (on master branch)</li>
+</ol>
+
+      <footer class="site-footer">
+        <span class="site-footer-owner"><a href="https://github.com/uPhyca/stetho-realm">Stetho-realm</a> is maintained by <a href="https://github.com/uPhyca">uPhyca</a>.</span>
+
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
+      </footer>
+
+    </section>
+
+  
+  </body>
+</html>
