@@ -29,7 +29,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-import io.realm.internal.ColumnType;
 import io.realm.internal.LinkView;
 import io.realm.internal.Row;
 import io.realm.internal.Table;
@@ -41,6 +40,35 @@ public class Database implements ChromeDevtoolsDomain {
     private final boolean withMetaTables;
     private final long limit;
     private final boolean ascendingOrder;
+
+    private enum StethoRealmFieldType {
+        INTEGER(0),
+        BOOLEAN(1),
+        STRING(2),
+        BINARY(4),
+        UNSUPPORTED_TABLE(5),
+        UNSUPPORTED_MIXED(6),
+        DATE(7),
+        FLOAT(9),
+        DOUBLE(10),
+        OBJECT(12),
+        LIST(13),
+        // BACKLINK(14); Not exposed until needed
+
+        // Stetho Realmが勝手に定義した特別な値
+        UNKNOWN(-1);
+
+        private final int nativeValue;
+
+        StethoRealmFieldType(int nativeValue) {
+            this.nativeValue = nativeValue;
+        }
+
+        @SuppressWarnings("unused")
+        public int getValue() {
+            return nativeValue;
+        }
+    }
 
     /**
      * 指定されたパラメータで {@link Database}インスタンスを構築します。
@@ -200,10 +228,10 @@ public class Database implements ChromeDevtoolsDomain {
                     case DATE:
                         flatList.add(rowData.getDate(column));
                         break;
-                    case LINK:
+                    case OBJECT:
                         flatList.add(rowData.getLink(column));
                         break;
-                    case LINK_LIST:
+                    case LIST:
                         flatList.add(rowData.getLinkList(column));
                         break;
                     default:
@@ -332,18 +360,36 @@ public class Database implements ChromeDevtoolsDomain {
     }
 
     private abstract static class RowWrapper {
+        private static final boolean s0_86_OR_NEWER;
         private static final boolean s0_81_OR_NEWER;
 
         static {
-            s0_81_OR_NEWER = Row.class.isInterface();
+            s0_81_OR_NEWER = is0_81_OrNewer();
+            s0_86_OR_NEWER = (s0_81_OR_NEWER && is0_86_OrNewer());
+        }
+
+        private static boolean is0_81_OrNewer() {
+            return Row.class.isInterface();
+        }
+
+        private static boolean is0_86_OrNewer() {
+            try {
+                // 0.86.0 or newer does not have io.realm.internal.ColumnType
+                Class.forName("io.realm.internal.ColumnType");
+                return false;
+            } catch (ClassNotFoundException e) {
+                return true;
+            }
         }
 
         public static RowWrapper wrap(Row row) {
+            if (s0_86_OR_NEWER) {
+                return new RowWrapper_0_86(row);
+            }
             if (s0_81_OR_NEWER) {
                 return new RowWrapper_0_81(row);
-            } else {
-                return new RowWrapper_0_80(row);
             }
+            return new RowWrapper_0_80(row);
         }
 
         protected RowWrapper() {
@@ -351,7 +397,7 @@ public class Database implements ChromeDevtoolsDomain {
 
         public abstract long getIndex();
 
-        public abstract ColumnType getColumnType(long columnIndex);
+        public abstract StethoRealmFieldType getColumnType(long columnIndex);
 
         public abstract long getLong(long columnIndex);
 
@@ -376,24 +422,24 @@ public class Database implements ChromeDevtoolsDomain {
     private static final class RowWrapper_0_80 extends RowWrapper {
 
         /*
-         * 0.81 でビルドされているので Row は interface だが、 0.80 では class なので
+         * 0.81 以降でビルドされているので Row は interface だが、 0.80 では class なので
          * 直接メソッド呼び出しを行うとうまくいかない(interface のメソッド呼び出しの
          * 命令は invokeinterface だが、クラスは invokevirtual)。
          * そこで、0_80 ではリフレクションで呼び出しを行うので Object型で保持しておく(うっかり呼ばないように)。
          */
         private final Object row;
 
-        private Method getIndexMethod;
-        private Method getColumnTypeMethod;
-        private Method getLongMethod;
-        private Method getBooleanMethod;
-        private Method getFloatMethod;
-        private Method getDoubleMethod;
-        private Method getDateMethod;
-        private Method getStringMethod;
-        private Method getBinaryByteArrayMethod;
-        private Method getLinkMethod;
-        private Method getLinkListMethod;
+        private final Method getIndexMethod;
+        private final Method getColumnTypeMethod;
+        private final Method getLongMethod;
+        private final Method getBooleanMethod;
+        private final Method getFloatMethod;
+        private final Method getDoubleMethod;
+        private final Method getDateMethod;
+        private final Method getStringMethod;
+        private final Method getBinaryByteArrayMethod;
+        private final Method getLinkMethod;
+        private final Method getLinkListMethod;
 
         RowWrapper_0_80(Row row) {
             this.row = row;
@@ -428,9 +474,46 @@ public class Database implements ChromeDevtoolsDomain {
         }
 
         @Override
-        public ColumnType getColumnType(long columnIndex) {
+        public StethoRealmFieldType getColumnType(long columnIndex) {
             try {
-                return (ColumnType) getColumnTypeMethod.invoke(row, columnIndex);
+                // io.realm.internal.ColumnType
+                final Enum<?> result = (Enum<?>) getColumnTypeMethod.invoke(row, columnIndex);
+                // see https://github.com/realm/realm-java/blob/v0.80.0/realm/src/main/java/io/realm/internal/ColumnType.java#L25-L35
+                final String name = result.name();
+                if (name.equals("INTEGER")) {
+                    return StethoRealmFieldType.INTEGER;
+                }
+                if (name.equals("BOOLEAN")) {
+                    return StethoRealmFieldType.BOOLEAN;
+                }
+                if (name.equals("STRING")) {
+                    return StethoRealmFieldType.STRING;
+                }
+                if (name.equals("BINARY")) {
+                    return StethoRealmFieldType.BINARY;
+                }
+                if (name.equals("TABLE")) {
+                    return StethoRealmFieldType.UNSUPPORTED_TABLE;
+                }
+                if (name.equals("MIXED")) {
+                    return StethoRealmFieldType.UNSUPPORTED_MIXED;
+                }
+                if (name.equals("DATE")) {
+                    return StethoRealmFieldType.DATE;
+                }
+                if (name.equals("FLOAT")) {
+                    return StethoRealmFieldType.FLOAT;
+                }
+                if (name.equals("DOUBLE")) {
+                    return StethoRealmFieldType.DOUBLE;
+                }
+                if (name.equals("LINK")) {
+                    return StethoRealmFieldType.OBJECT;
+                }
+                if (name.equals("LINK_LIST")) {
+                    return StethoRealmFieldType.LIST;
+                }
+                return StethoRealmFieldType.UNKNOWN;
             } catch (IllegalAccessException e) {
                 throw new RuntimeException(e);
             } catch (InvocationTargetException e) {
@@ -541,8 +624,15 @@ public class Database implements ChromeDevtoolsDomain {
     private static final class RowWrapper_0_81 extends RowWrapper {
         private final Row row;
 
+        private final Method getColumnTypeMethod;
+
         RowWrapper_0_81(Row row) {
             this.row = row;
+            try {
+                getColumnTypeMethod = row.getClass().getMethod("getColumnType", Long.TYPE);
+            } catch (NoSuchMethodException e) {
+                throw new RuntimeException(e);
+            }
         }
 
         @Override
@@ -551,8 +641,51 @@ public class Database implements ChromeDevtoolsDomain {
         }
 
         @Override
-        public ColumnType getColumnType(long columnIndex) {
-            return row.getColumnType(columnIndex);
+        public StethoRealmFieldType getColumnType(long columnIndex) {
+            try {
+                // io.realm.internal.ColumnType
+                final Enum<?> result = (Enum<?>) getColumnTypeMethod.invoke(row, columnIndex);
+                // see https://github.com/realm/realm-java/blob/v0.85.0/realm/realm-library/src/main/java/io/realm/internal/ColumnType.java#L26-L36
+                final String name = result.name();
+                if (name.equals("INTEGER")) {
+                    return StethoRealmFieldType.INTEGER;
+                }
+                if (name.equals("BOOLEAN")) {
+                    return StethoRealmFieldType.BOOLEAN;
+                }
+                if (name.equals("STRING")) {
+                    return StethoRealmFieldType.STRING;
+                }
+                if (name.equals("BINARY")) {
+                    return StethoRealmFieldType.BINARY;
+                }
+                if (name.equals("TABLE")) {
+                    return StethoRealmFieldType.UNSUPPORTED_TABLE;
+                }
+                if (name.equals("MIXED")) {
+                    return StethoRealmFieldType.UNSUPPORTED_MIXED;
+                }
+                if (name.equals("DATE")) {
+                    return StethoRealmFieldType.DATE;
+                }
+                if (name.equals("FLOAT")) {
+                    return StethoRealmFieldType.FLOAT;
+                }
+                if (name.equals("DOUBLE")) {
+                    return StethoRealmFieldType.DOUBLE;
+                }
+                if (name.equals("LINK")) {
+                    return StethoRealmFieldType.OBJECT;
+                }
+                if (name.equals("LINK_LIST")) {
+                    return StethoRealmFieldType.LIST;
+                }
+                return StethoRealmFieldType.UNKNOWN;
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            } catch (InvocationTargetException e) {
+                throw new RuntimeException(e.getTargetException());
+            }
         }
 
         @Override
@@ -601,4 +734,101 @@ public class Database implements ChromeDevtoolsDomain {
         }
     }
 
+    private static final class RowWrapper_0_86 extends RowWrapper {
+        private final Row row;
+
+        RowWrapper_0_86(Row row) {
+            this.row = row;
+        }
+
+        @Override
+        public long getIndex() {
+            return row.getIndex();
+        }
+
+        public StethoRealmFieldType getColumnType(long columnIndex) {
+            // io.realm.RealmFieldType
+            final Enum<?> columnType = row.getColumnType(columnIndex);
+            final String name = columnType.name();
+            if (name.equals("INTEGER")) {
+                return StethoRealmFieldType.INTEGER;
+            }
+            if (name.equals("BOOLEAN")) {
+                return StethoRealmFieldType.BOOLEAN;
+            }
+            if (name.equals("STRING")) {
+                return StethoRealmFieldType.STRING;
+            }
+            if (name.equals("BINARY")) {
+                return StethoRealmFieldType.BINARY;
+            }
+            if (name.equals("UNSUPPORTED_TABLE")) {
+                return StethoRealmFieldType.UNSUPPORTED_TABLE;
+            }
+            if (name.equals("UNSUPPORTED_MIXED")) {
+                return StethoRealmFieldType.UNSUPPORTED_MIXED;
+            }
+            if (name.equals("DATE")) {
+                return StethoRealmFieldType.DATE;
+            }
+            if (name.equals("FLOAT")) {
+                return StethoRealmFieldType.FLOAT;
+            }
+            if (name.equals("DOUBLE")) {
+                return StethoRealmFieldType.DOUBLE;
+            }
+            if (name.equals("OBJECT")) {
+                return StethoRealmFieldType.OBJECT;
+            }
+            if (name.equals("LIST")) {
+                return StethoRealmFieldType.LIST;
+            }
+            return StethoRealmFieldType.UNKNOWN;
+        }
+
+        @Override
+        public long getLong(long columnIndex) {
+            return row.getLong(columnIndex);
+        }
+
+        @Override
+        public boolean getBoolean(long columnIndex) {
+            return row.getBoolean(columnIndex);
+        }
+
+        @Override
+        public float getFloat(long columnIndex) {
+            return row.getFloat(columnIndex);
+        }
+
+        @Override
+        public double getDouble(long columnIndex) {
+            return row.getDouble(columnIndex);
+        }
+
+        @Override
+        public Date getDate(long columnIndex) {
+            return row.getDate(columnIndex);
+        }
+
+        @Override
+        public String getString(long columnIndex) {
+            return row.getString(columnIndex);
+        }
+
+        @Override
+        public byte[] getBinaryByteArray(long columnIndex) {
+            return row.getBinaryByteArray(columnIndex);
+        }
+
+        @Override
+        public long getLink(long columnIndex) {
+            return row.getLink(columnIndex);
+        }
+
+        @Override
+        public LinkView getLinkList(long columnIndex) {
+            return row.getLinkList(columnIndex);
+        }
+    }
 }
