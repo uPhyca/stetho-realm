@@ -249,12 +249,18 @@ public class Database implements ChromeDevtoolsDomain {
                             }
                         }
                         LinkView linkView = rowData.getLinkList(column);
+                        if(linkView.size() == 0) {
+                            flatList.add("[]");
+                            break;
+                        }
+
                         StringBuilder sb = new StringBuilder();
+                        final String delimiter = ",";
                         sb.append("[");
                         try {
                             for (int i = 0; i < linkView.size(); i++) {
                                 sb.append(((Row) getRowMethod.invoke(linkView, i)).getIndex());
-                                sb.append(",");
+                                sb.append(delimiter);
                             }
                         } catch (IllegalAccessException e) {
                             throw new RuntimeException(e);
@@ -262,9 +268,7 @@ public class Database implements ChromeDevtoolsDomain {
                             throw new RuntimeException(e.getTargetException());
                         }
                         final int len = sb.length();
-                        if (len > 1) {
-                            sb.delete(len - 1, len);
-                        }
+                        sb.delete(len - delimiter.length(), len);
                         sb.append("]");
                         flatList.add(sb.toString());
                         break;
