@@ -10,6 +10,7 @@
 package com.uphyca.stetho_realm;
 
 import android.database.sqlite.SQLiteException;
+import android.text.format.DateFormat;
 
 import com.facebook.stetho.common.Util;
 import com.facebook.stetho.inspector.jsonrpc.JsonRpcPeer;
@@ -69,6 +70,7 @@ public class Database implements ChromeDevtoolsDomain {
             return nativeValue;
         }
     }
+    private final String dateFormat;
 
     /**
      * 指定されたパラメータで {@link Database}インスタンスを構築します。
@@ -82,6 +84,7 @@ public class Database implements ChromeDevtoolsDomain {
      *                             {@code null} の場合は暗号化されていないものとして扱います。
      *                             また、 {@code encryptionKeys} で個別のキーが指定されている
      *                             データベースについては {@code encryptionKeys}の指定が優先されます。
+     * @param dateFormat           日付を表示する際のフォーマット
      * @param encryptionKeys       データベース個別のキーを指定するマップ。
      */
     Database(String packageName,
@@ -90,12 +93,14 @@ public class Database implements ChromeDevtoolsDomain {
              long limit,
              boolean ascendingOrder,
              byte[] defaultEncryptionKey,
+             String dateFormat,
              Map<String, byte[]> encryptionKeys) {
         this.realmPeerManager = new RealmPeerManager(packageName, filesProvider, defaultEncryptionKey, encryptionKeys);
         this.objectMapper = new ObjectMapper();
         this.withMetaTables = withMetaTables;
         this.limit = limit;
         this.ascendingOrder = ascendingOrder;
+        this.dateFormat = dateFormat;
     }
 
     @ChromeDevtoolsMethod
@@ -226,13 +231,42 @@ public class Database implements ChromeDevtoolsDomain {
                         }
                         break;
                     case DATE:
-                        flatList.add(rowData.getDate(column));
+                        flatList.add(DateFormat.format(dateFormat, rowData.getDate(column)));
                         break;
                     case OBJECT:
                         flatList.add(rowData.getLink(column));
                         break;
                     case LIST:
-                        flatList.add(rowData.getLinkList(column));
+                        Method getRowMethod;
+                        try {
+                            // v0.81.0 or newer
+                            getRowMethod = LinkView.class.getMethod("getCheckedRow", Long.TYPE);
+                        } catch (NoSuchMethodException e) {
+                            try {
+                                getRowMethod = LinkView.class.getMethod("get", Long.TYPE);
+                            } catch (NoSuchMethodException ex) {
+                                throw new RuntimeException("get method not found in LinkView class.");
+                            }
+                        }
+                        LinkView linkView = rowData.getLinkList(column);
+                        StringBuilder sb = new StringBuilder();
+                        sb.append("[");
+                        try {
+                            for (int i = 0; i < linkView.size(); i++) {
+                                sb.append(((Row) getRowMethod.invoke(linkView, i)).getIndex());
+                                sb.append(",");
+                            }
+                        } catch (IllegalAccessException e) {
+                            throw new RuntimeException(e);
+                        } catch (InvocationTargetException e) {
+                            throw new RuntimeException(e.getTargetException());
+                        }
+                        final int len = sb.length();
+                        if (len > 1) {
+                            sb.delete(len - 1, len);
+                        }
+                        sb.append("]");
+                        flatList.add(sb.toString());
                         break;
                     default:
                         flatList.add("unknown column type: " + rowData.getColumnType(column));
