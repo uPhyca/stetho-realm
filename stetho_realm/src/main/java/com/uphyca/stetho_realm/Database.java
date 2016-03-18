@@ -249,7 +249,7 @@ public class Database implements ChromeDevtoolsDomain {
                             }
                         }
                         LinkView linkView = rowData.getLinkList(column);
-                        if(linkView.size() == 0) {
+                        if (linkView.size() == 0) {
                             flatList.add("[]");
                             break;
                         }
@@ -259,7 +259,7 @@ public class Database implements ChromeDevtoolsDomain {
                         sb.append("[");
                         try {
                             for (int i = 0; i < linkView.size(); i++) {
-                                sb.append(((Row) getRowMethod.invoke(linkView, i)).getIndex());
+                                sb.append(RowWrapper.wrap((Row) getRowMethod.invoke(linkView, i)).getIndex());
                                 sb.append(delimiter);
                             }
                         } catch (IllegalAccessException e) {
