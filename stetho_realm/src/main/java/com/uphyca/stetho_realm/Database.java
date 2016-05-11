@@ -23,6 +23,8 @@ import org.json.JSONObject;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -35,11 +37,15 @@ import io.realm.internal.Table;
 
 public class Database implements ChromeDevtoolsDomain {
 
+    private static final String NULL = "[null]";
+
     private final RealmPeerManager realmPeerManager;
     private final ObjectMapper objectMapper;
     private final boolean withMetaTables;
     private final long limit;
     private final boolean ascendingOrder;
+
+    private DateFormat dateTimeFormatter;
 
     private enum StethoRealmFieldType {
         INTEGER(0),
@@ -48,7 +54,8 @@ public class Database implements ChromeDevtoolsDomain {
         BINARY(4),
         UNSUPPORTED_TABLE(5),
         UNSUPPORTED_MIXED(6),
-        DATE(7),
+        OLD_DATE(7),
+        DATE(8),
         FLOAT(9),
         DOUBLE(10),
         OBJECT(12),
@@ -175,6 +182,8 @@ public class Database implements ChromeDevtoolsDomain {
     }
 
     private List<Object> flattenRows(Table table, long limit, boolean addRowIndex) {
+        DateFormat df = null;
+
         Util.throwIfNot(limit >= 0);
         final List<Object> flatList = new ArrayList<>();
         long numColumns = table.getColumnCount();
@@ -225,8 +234,9 @@ public class Database implements ChromeDevtoolsDomain {
                             flatList.add(aDouble);
                         }
                         break;
+                    case OLD_DATE:
                     case DATE:
-                        flatList.add(rowData.getDate(column));
+                        flatList.add(formatDate(rowData.getDate(column)));
                         break;
                     case OBJECT:
                         flatList.add(rowData.getLink(column));
@@ -306,6 +316,15 @@ public class Database implements ChromeDevtoolsDomain {
         public int code;
     }
 
+    private String formatDate(Date date) {
+        if (date == null) {
+            return NULL;
+        }
+        if (dateTimeFormatter == null) {
+            dateTimeFormatter = SimpleDateFormat.getDateTimeInstance(SimpleDateFormat.LONG, SimpleDateFormat.LONG);
+        }
+        return dateTimeFormatter.format(date) + " (" + date.getTime() + ')';
+    }
 
     private abstract static class RowFetcher {
         private static RowFetcher sInstance;
@@ -360,12 +379,14 @@ public class Database implements ChromeDevtoolsDomain {
     }
 
     private abstract static class RowWrapper {
+        private static final boolean s0_90_OR_NEWER;
         private static final boolean s0_86_OR_NEWER;
         private static final boolean s0_81_OR_NEWER;
 
         static {
             s0_81_OR_NEWER = is0_81_OrNewer();
             s0_86_OR_NEWER = (s0_81_OR_NEWER && is0_86_OrNewer());
+            s0_90_OR_NEWER = (s0_86_OR_NEWER && is0_90_OrNewer());
         }
 
         private static boolean is0_81_OrNewer() {
@@ -382,7 +403,39 @@ public class Database implements ChromeDevtoolsDomain {
             }
         }
 
+        private static boolean is0_90_OrNewer() {
+            // 0.90.0 changed the value of io.realm.RealmFieldType.DATE from 7 to 8
+
+            final Class<? extends Enum> fieldTypeClass;
+            try {
+                //noinspection unchecked
+                fieldTypeClass = (Class<? extends Enum>) Class.forName("io.realm.RealmFieldType");
+            } catch (ClassNotFoundException e) {
+                return false;
+            }
+
+            try {
+                final Enum<?> date = Enum.valueOf(fieldTypeClass, "DATE");
+                final Method getNativeValueMethod = fieldTypeClass.getDeclaredMethod("getNativeValue");
+                final Integer nativeValue = (Integer) getNativeValueMethod.invoke(date);
+
+                return nativeValue != 7;
+            } catch (NoSuchMethodException e) {
+                // at least before 0.90 does not throw this exception
+                return true;
+            } catch (IllegalAccessException e) {
+                // at least before 0.90 does not throw this exception
+                return true;
+            } catch (InvocationTargetException e) {
+                // at least before 0.90 does not throw this exception
+                return true;
+            }
+        }
+
         public static RowWrapper wrap(Row row) {
+            if (s0_90_OR_NEWER) {
+                return new RowWrapper_0_90(row);
+            }
             if (s0_86_OR_NEWER) {
                 return new RowWrapper_0_86(row);
             }
@@ -499,7 +552,7 @@ public class Database implements ChromeDevtoolsDomain {
                     return StethoRealmFieldType.UNSUPPORTED_MIXED;
                 }
                 if (name.equals("DATE")) {
-                    return StethoRealmFieldType.DATE;
+                    return StethoRealmFieldType.OLD_DATE;
                 }
                 if (name.equals("FLOAT")) {
                     return StethoRealmFieldType.FLOAT;
@@ -666,7 +719,7 @@ public class Database implements ChromeDevtoolsDomain {
                     return StethoRealmFieldType.UNSUPPORTED_MIXED;
                 }
                 if (name.equals("DATE")) {
-                    return StethoRealmFieldType.DATE;
+                    return StethoRealmFieldType.OLD_DATE;
                 }
                 if (name.equals("FLOAT")) {
                     return StethoRealmFieldType.FLOAT;
@@ -767,6 +820,107 @@ public class Database implements ChromeDevtoolsDomain {
             }
             if (name.equals("UNSUPPORTED_MIXED")) {
                 return StethoRealmFieldType.UNSUPPORTED_MIXED;
+            }
+            if (name.equals("DATE")) {
+                return StethoRealmFieldType.OLD_DATE;
+            }
+            if (name.equals("FLOAT")) {
+                return StethoRealmFieldType.FLOAT;
+            }
+            if (name.equals("DOUBLE")) {
+                return StethoRealmFieldType.DOUBLE;
+            }
+            if (name.equals("OBJECT")) {
+                return StethoRealmFieldType.OBJECT;
+            }
+            if (name.equals("LIST")) {
+                return StethoRealmFieldType.LIST;
+            }
+            return StethoRealmFieldType.UNKNOWN;
+        }
+
+        @Override
+        public long getLong(long columnIndex) {
+            return row.getLong(columnIndex);
+        }
+
+        @Override
+        public boolean getBoolean(long columnIndex) {
+            return row.getBoolean(columnIndex);
+        }
+
+        @Override
+        public float getFloat(long columnIndex) {
+            return row.getFloat(columnIndex);
+        }
+
+        @Override
+        public double getDouble(long columnIndex) {
+            return row.getDouble(columnIndex);
+        }
+
+        @Override
+        public Date getDate(long columnIndex) {
+            return row.getDate(columnIndex);
+        }
+
+        @Override
+        public String getString(long columnIndex) {
+            return row.getString(columnIndex);
+        }
+
+        @Override
+        public byte[] getBinaryByteArray(long columnIndex) {
+            return row.getBinaryByteArray(columnIndex);
+        }
+
+        @Override
+        public long getLink(long columnIndex) {
+            return row.getLink(columnIndex);
+        }
+
+        @Override
+        public LinkView getLinkList(long columnIndex) {
+            return row.getLinkList(columnIndex);
+        }
+    }
+
+    private static final class RowWrapper_0_90 extends RowWrapper {
+        private final Row row;
+
+        RowWrapper_0_90(Row row) {
+            this.row = row;
+        }
+
+        @Override
+        public long getIndex() {
+            return row.getIndex();
+        }
+
+        public StethoRealmFieldType getColumnType(long columnIndex) {
+            // io.realm.RealmFieldType
+            final Enum<?> columnType = row.getColumnType(columnIndex);
+            final String name = columnType.name();
+            if (name.equals("INTEGER")) {
+                return StethoRealmFieldType.INTEGER;
+            }
+            if (name.equals("BOOLEAN")) {
+                return StethoRealmFieldType.BOOLEAN;
+            }
+            if (name.equals("STRING")) {
+                return StethoRealmFieldType.STRING;
+            }
+            if (name.equals("BINARY")) {
+                return StethoRealmFieldType.BINARY;
+            }
+            if (name.equals("UNSUPPORTED_TABLE")) {
+                return StethoRealmFieldType.UNSUPPORTED_TABLE;
+            }
+            if (name.equals("UNSUPPORTED_MIXED")) {
+                return StethoRealmFieldType.UNSUPPORTED_MIXED;
+            }
+            if (name.equals("UNSUPPORTED_DATE")) {
+                return StethoRealmFieldType.OLD_DATE;
             }
             if (name.equals("DATE")) {
                 return StethoRealmFieldType.DATE;
