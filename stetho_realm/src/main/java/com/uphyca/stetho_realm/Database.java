@@ -182,8 +182,6 @@ public class Database implements ChromeDevtoolsDomain {
     }
 
     private List<Object> flattenRows(Table table, long limit, boolean addRowIndex) {
-        DateFormat df = null;
-
         Util.throwIfNot(limit >= 0);
         final List<Object> flatList = new ArrayList<>();
         long numColumns = table.getColumnCount();
@@ -199,50 +197,83 @@ public class Database implements ChromeDevtoolsDomain {
             for (int column = 0; column < numColumns; column++) {
                 switch (rowData.getColumnType(column)) {
                     case INTEGER:
-                        flatList.add(rowData.getLong(column));
+                        if (rowData.isNull(column)) {
+                            flatList.add(NULL);
+                        } else {
+                            flatList.add(rowData.getLong(column));
+                        }
                         break;
                     case BOOLEAN:
-                        flatList.add(rowData.getBoolean(column));
+                        if (rowData.isNull(column)) {
+                            flatList.add(NULL);
+                        } else {
+                            flatList.add(rowData.getBoolean(column));
+                        }
                         break;
                     case STRING:
-                        flatList.add(rowData.getString(column));
+                        if (rowData.isNull(column)) {
+                            flatList.add(NULL);
+                        } else {
+                            flatList.add(rowData.getString(column));
+                        }
                         break;
                     case BINARY:
-                        flatList.add(rowData.getBinaryByteArray(column));
+                        if (rowData.isNull(column)) {
+                            flatList.add(NULL);
+                        } else {
+                            flatList.add(rowData.getBinaryByteArray(column));
+                        }
                         break;
                     case FLOAT:
-                        final float aFloat = rowData.getFloat(column);
-                        if (Float.isNaN(aFloat)) {
-                            flatList.add("NaN");
-                        } else if (aFloat == Float.POSITIVE_INFINITY) {
-                            flatList.add("Infinity");
-                        } else if (aFloat == Float.NEGATIVE_INFINITY) {
-                            flatList.add("-Infinity");
+                        if (rowData.isNull(column)) {
+                            flatList.add(NULL);
                         } else {
-                            flatList.add(aFloat);
+                            final float aFloat = rowData.getFloat(column);
+                            if (Float.isNaN(aFloat)) {
+                                flatList.add("NaN");
+                            } else if (aFloat == Float.POSITIVE_INFINITY) {
+                                flatList.add("Infinity");
+                            } else if (aFloat == Float.NEGATIVE_INFINITY) {
+                                flatList.add("-Infinity");
+                            } else {
+                                flatList.add(aFloat);
+                            }
                         }
                         break;
                     case DOUBLE:
-                        final double aDouble = rowData.getDouble(column);
-                        if (Double.isNaN(aDouble)) {
-                            flatList.add("NaN");
-                        } else if (aDouble == Double.POSITIVE_INFINITY) {
-                            flatList.add("Infinity");
-                        } else if (aDouble == Double.NEGATIVE_INFINITY) {
-                            flatList.add("-Infinity");
+                        if (rowData.isNull(column)) {
+                            flatList.add(NULL);
                         } else {
-                            flatList.add(aDouble);
+                            final double aDouble = rowData.getDouble(column);
+                            if (Double.isNaN(aDouble)) {
+                                flatList.add("NaN");
+                            } else if (aDouble == Double.POSITIVE_INFINITY) {
+                                flatList.add("Infinity");
+                            } else if (aDouble == Double.NEGATIVE_INFINITY) {
+                                flatList.add("-Infinity");
+                            } else {
+                                flatList.add(aDouble);
+                            }
                         }
                         break;
                     case OLD_DATE:
                     case DATE:
-                        flatList.add(formatDate(rowData.getDate(column)));
+                        if (rowData.isNull(column)) {
+                            flatList.add(NULL);
+                        } else {
+                            flatList.add(formatDate(rowData.getDate(column)));
+                        }
                         break;
                     case OBJECT:
-                        flatList.add(rowData.getLink(column));
+                        if (rowData.isNullLink(column)) {
+                            flatList.add(NULL);
+                        } else {
+                            flatList.add(rowData.getLink(column));
+                        }
                         break;
                     case LIST:
-                        flatList.add(rowData.getLinkList(column));
+                        // LIST never be null
+                        flatList.add(formatList(rowData.getLinkList(column)));
                         break;
                     default:
                         flatList.add("unknown column type: " + rowData.getColumnType(column));
@@ -317,13 +348,28 @@ public class Database implements ChromeDevtoolsDomain {
     }
 
     private String formatDate(Date date) {
-        if (date == null) {
-            return NULL;
-        }
         if (dateTimeFormatter == null) {
             dateTimeFormatter = SimpleDateFormat.getDateTimeInstance(SimpleDateFormat.LONG, SimpleDateFormat.LONG);
         }
         return dateTimeFormatter.format(date) + " (" + date.getTime() + ')';
+    }
+
+    private String formatList(LinkView linkList) {
+        final StringBuilder sb = new StringBuilder(linkList.getTargetTable().getName());
+        sb.append("{");
+
+        final long size = linkList.size();
+        for (long pos = 0; pos < size; pos++) {
+            sb.append(linkList.getTargetRowIndex(pos));
+            sb.append(',');
+        }
+        if (size != 0) {
+            // remove last ','
+            sb.setLength(sb.length() - 1);
+        }
+
+        sb.append("}");
+        return sb.toString();
     }
 
     private abstract static class RowFetcher {
@@ -381,16 +427,27 @@ public class Database implements ChromeDevtoolsDomain {
     private abstract static class RowWrapper {
         private static final boolean s0_90_OR_NEWER;
         private static final boolean s0_86_OR_NEWER;
+        private static final boolean s0_83_OR_NEWER;
         private static final boolean s0_81_OR_NEWER;
 
         static {
             s0_81_OR_NEWER = is0_81_OrNewer();
-            s0_86_OR_NEWER = (s0_81_OR_NEWER && is0_86_OrNewer());
+            s0_83_OR_NEWER = (s0_81_OR_NEWER && is0_83_OrNewer());
+            s0_86_OR_NEWER = (s0_83_OR_NEWER && is0_86_OrNewer());
             s0_90_OR_NEWER = (s0_86_OR_NEWER && is0_90_OrNewer());
         }
 
         private static boolean is0_81_OrNewer() {
             return Row.class.isInterface();
+        }
+
+        private static boolean is0_83_OrNewer() {
+            try {
+                Row.class.getDeclaredMethod("isNull", long.class);
+                return true;
+            } catch (NoSuchMethodException e) {
+                return false;
+            }
         }
 
         private static boolean is0_86_OrNewer() {
@@ -439,6 +496,9 @@ public class Database implements ChromeDevtoolsDomain {
             if (s0_86_OR_NEWER) {
                 return new RowWrapper_0_86(row);
             }
+            if (s0_83_OR_NEWER) {
+                return new RowWrapper_0_83(row);
+            }
             if (s0_81_OR_NEWER) {
                 return new RowWrapper_0_81(row);
             }
@@ -451,6 +511,11 @@ public class Database implements ChromeDevtoolsDomain {
         public abstract long getIndex();
 
         public abstract StethoRealmFieldType getColumnType(long columnIndex);
+
+        // for BOOLEAN, INTEGER, FLOAT, DOUBLE, STRING, BINARY, DATE
+        public abstract boolean isNull(long columnIndex);
+        // for Link
+        public abstract boolean isNullLink(long columnIndex);
 
         public abstract long getLong(long columnIndex);
 
@@ -484,6 +549,7 @@ public class Database implements ChromeDevtoolsDomain {
 
         private final Method getIndexMethod;
         private final Method getColumnTypeMethod;
+        private final Method isNullLinkMethod;
         private final Method getLongMethod;
         private final Method getBooleanMethod;
         private final Method getFloatMethod;
@@ -501,6 +567,7 @@ public class Database implements ChromeDevtoolsDomain {
                 final Class<? extends Row> aClass = row.getClass();
                 getIndexMethod = aClass.getMethod("getIndex");
                 getColumnTypeMethod = aClass.getMethod("getColumnType", Long.TYPE);
+                isNullLinkMethod = aClass.getMethod("isNullLink", Long.TYPE);
                 getLongMethod = aClass.getMethod("getLong", Long.TYPE);
                 getBooleanMethod = aClass.getMethod("getBoolean", Long.TYPE);
                 getFloatMethod = aClass.getMethod("getFloat", Long.TYPE);
@@ -567,6 +634,23 @@ public class Database implements ChromeDevtoolsDomain {
                     return StethoRealmFieldType.LIST;
                 }
                 return StethoRealmFieldType.UNKNOWN;
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            } catch (InvocationTargetException e) {
+                throw new RuntimeException(e.getTargetException());
+            }
+        }
+
+        @Override
+        public boolean isNull(long columnIndex) {
+            // null column is not supported
+            return false;
+        }
+
+        @Override
+        public boolean isNullLink(long columnIndex) {
+            try {
+                return (boolean) isNullLinkMethod.invoke(row, columnIndex);
             } catch (IllegalAccessException e) {
                 throw new RuntimeException(e);
             } catch (InvocationTargetException e) {
@@ -674,8 +758,8 @@ public class Database implements ChromeDevtoolsDomain {
         }
     }
 
-    private static final class RowWrapper_0_81 extends RowWrapper {
-        private final Row row;
+    private static class RowWrapper_0_81 extends RowWrapper {
+        protected final Row row;
 
         private final Method getColumnTypeMethod;
 
@@ -742,6 +826,17 @@ public class Database implements ChromeDevtoolsDomain {
         }
 
         @Override
+        public boolean isNull(long columnIndex) {
+            // null column is not supported
+            return false;
+        }
+
+        @Override
+        public boolean isNullLink(long columnIndex) {
+            return row.isNullLink(columnIndex);
+        }
+
+        @Override
         public long getLong(long columnIndex) {
             return row.getLong(columnIndex);
         }
@@ -784,6 +879,18 @@ public class Database implements ChromeDevtoolsDomain {
         @Override
         public LinkView getLinkList(long columnIndex) {
             return row.getLinkList(columnIndex);
+        }
+    }
+
+    private static final class RowWrapper_0_83 extends RowWrapper_0_81 {
+
+        RowWrapper_0_83(Row row) {
+            super(row);
+        }
+
+        @Override
+        public boolean isNull(long columnIndex) {
+            return false;
         }
     }
 
@@ -837,6 +944,16 @@ public class Database implements ChromeDevtoolsDomain {
                 return StethoRealmFieldType.LIST;
             }
             return StethoRealmFieldType.UNKNOWN;
+        }
+
+        @Override
+        public boolean isNull(long columnIndex) {
+            return row.isNull(columnIndex);
+        }
+
+        @Override
+        public boolean isNullLink(long columnIndex) {
+            return row.isNullLink(columnIndex);
         }
 
         @Override
@@ -938,6 +1055,16 @@ public class Database implements ChromeDevtoolsDomain {
                 return StethoRealmFieldType.LIST;
             }
             return StethoRealmFieldType.UNKNOWN;
+        }
+
+        @Override
+        public boolean isNull(long columnIndex) {
+            return row.isNull(columnIndex);
+        }
+
+        @Override
+        public boolean isNullLink(long columnIndex) {
+            return row.isNullLink(columnIndex);
         }
 
         @Override
