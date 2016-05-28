@@ -10,7 +10,6 @@
 package com.uphyca.stetho_realm;
 
 import android.database.sqlite.SQLiteException;
-import android.text.format.DateFormat;
 
 import com.facebook.stetho.common.Util;
 import com.facebook.stetho.inspector.jsonrpc.JsonRpcPeer;
@@ -24,6 +23,8 @@ import org.json.JSONObject;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -36,11 +37,15 @@ import io.realm.internal.Table;
 
 public class Database implements ChromeDevtoolsDomain {
 
+    private static final String NULL = "[null]";
+
     private final RealmPeerManager realmPeerManager;
     private final ObjectMapper objectMapper;
     private final boolean withMetaTables;
     private final long limit;
     private final boolean ascendingOrder;
+
+    private DateFormat dateTimeFormatter;
 
     private enum StethoRealmFieldType {
         INTEGER(0),
@@ -49,7 +54,8 @@ public class Database implements ChromeDevtoolsDomain {
         BINARY(4),
         UNSUPPORTED_TABLE(5),
         UNSUPPORTED_MIXED(6),
-        DATE(7),
+        OLD_DATE(7),
+        DATE(8),
         FLOAT(9),
         DOUBLE(10),
         OBJECT(12),
@@ -70,7 +76,6 @@ public class Database implements ChromeDevtoolsDomain {
             return nativeValue;
         }
     }
-    private final String dateFormat;
 
     /**
      * 指定されたパラメータで {@link Database}インスタンスを構築します。
@@ -84,7 +89,6 @@ public class Database implements ChromeDevtoolsDomain {
      *                             {@code null} の場合は暗号化されていないものとして扱います。
      *                             また、 {@code encryptionKeys} で個別のキーが指定されている
      *                             データベースについては {@code encryptionKeys}の指定が優先されます。
-     * @param dateFormat           日付を表示する際のフォーマット
      * @param encryptionKeys       データベース個別のキーを指定するマップ。
      */
     Database(String packageName,
@@ -93,14 +97,12 @@ public class Database implements ChromeDevtoolsDomain {
              long limit,
              boolean ascendingOrder,
              byte[] defaultEncryptionKey,
-             String dateFormat,
              Map<String, byte[]> encryptionKeys) {
         this.realmPeerManager = new RealmPeerManager(packageName, filesProvider, defaultEncryptionKey, encryptionKeys);
         this.objectMapper = new ObjectMapper();
         this.withMetaTables = withMetaTables;
         this.limit = limit;
         this.ascendingOrder = ascendingOrder;
-        this.dateFormat = dateFormat;
     }
 
     @ChromeDevtoolsMethod
@@ -195,82 +197,83 @@ public class Database implements ChromeDevtoolsDomain {
             for (int column = 0; column < numColumns; column++) {
                 switch (rowData.getColumnType(column)) {
                     case INTEGER:
-                        flatList.add(rowData.getLong(column));
+                        if (rowData.isNull(column)) {
+                            flatList.add(NULL);
+                        } else {
+                            flatList.add(rowData.getLong(column));
+                        }
                         break;
                     case BOOLEAN:
-                        flatList.add(rowData.getBoolean(column));
+                        if (rowData.isNull(column)) {
+                            flatList.add(NULL);
+                        } else {
+                            flatList.add(rowData.getBoolean(column));
+                        }
                         break;
                     case STRING:
-                        flatList.add(rowData.getString(column));
+                        if (rowData.isNull(column)) {
+                            flatList.add(NULL);
+                        } else {
+                            flatList.add(rowData.getString(column));
+                        }
                         break;
                     case BINARY:
-                        flatList.add(rowData.getBinaryByteArray(column));
+                        if (rowData.isNull(column)) {
+                            flatList.add(NULL);
+                        } else {
+                            flatList.add(rowData.getBinaryByteArray(column));
+                        }
                         break;
                     case FLOAT:
-                        final float aFloat = rowData.getFloat(column);
-                        if (Float.isNaN(aFloat)) {
-                            flatList.add("NaN");
-                        } else if (aFloat == Float.POSITIVE_INFINITY) {
-                            flatList.add("Infinity");
-                        } else if (aFloat == Float.NEGATIVE_INFINITY) {
-                            flatList.add("-Infinity");
+                        if (rowData.isNull(column)) {
+                            flatList.add(NULL);
                         } else {
-                            flatList.add(aFloat);
+                            final float aFloat = rowData.getFloat(column);
+                            if (Float.isNaN(aFloat)) {
+                                flatList.add("NaN");
+                            } else if (aFloat == Float.POSITIVE_INFINITY) {
+                                flatList.add("Infinity");
+                            } else if (aFloat == Float.NEGATIVE_INFINITY) {
+                                flatList.add("-Infinity");
+                            } else {
+                                flatList.add(aFloat);
+                            }
                         }
                         break;
                     case DOUBLE:
-                        final double aDouble = rowData.getDouble(column);
-                        if (Double.isNaN(aDouble)) {
-                            flatList.add("NaN");
-                        } else if (aDouble == Double.POSITIVE_INFINITY) {
-                            flatList.add("Infinity");
-                        } else if (aDouble == Double.NEGATIVE_INFINITY) {
-                            flatList.add("-Infinity");
+                        if (rowData.isNull(column)) {
+                            flatList.add(NULL);
                         } else {
-                            flatList.add(aDouble);
+                            final double aDouble = rowData.getDouble(column);
+                            if (Double.isNaN(aDouble)) {
+                                flatList.add("NaN");
+                            } else if (aDouble == Double.POSITIVE_INFINITY) {
+                                flatList.add("Infinity");
+                            } else if (aDouble == Double.NEGATIVE_INFINITY) {
+                                flatList.add("-Infinity");
+                            } else {
+                                flatList.add(aDouble);
+                            }
                         }
                         break;
+                    case OLD_DATE:
                     case DATE:
-                        flatList.add(DateFormat.format(dateFormat, rowData.getDate(column)));
+                        if (rowData.isNull(column)) {
+                            flatList.add(NULL);
+                        } else {
+                            flatList.add(formatDate(rowData.getDate(column)));
+                        }
                         break;
                     case OBJECT:
-                        flatList.add(rowData.getLink(column));
+                        if (rowData.isNullLink(column)) {
+                            flatList.add(NULL);
+                        } else {
+                            flatList.add(rowData.getLink(column));
+                        }
                         break;
                     case LIST:
-                        Method getRowMethod;
-                        try {
-                            // v0.81.0 or newer
-                            getRowMethod = LinkView.class.getMethod("getCheckedRow", Long.TYPE);
-                        } catch (NoSuchMethodException e) {
-                            try {
-                                getRowMethod = LinkView.class.getMethod("get", Long.TYPE);
-                            } catch (NoSuchMethodException ex) {
-                                throw new RuntimeException("get method not found in LinkView class.");
-                            }
-                        }
-                        LinkView linkView = rowData.getLinkList(column);
-                        if (linkView.size() == 0) {
-                            flatList.add("[]");
-                            break;
-                        }
-
-                        StringBuilder sb = new StringBuilder();
-                        final String delimiter = ",";
-                        sb.append("[");
-                        try {
-                            for (int i = 0; i < linkView.size(); i++) {
-                                sb.append(RowWrapper.wrap((Row) getRowMethod.invoke(linkView, i)).getIndex());
-                                sb.append(delimiter);
-                            }
-                        } catch (IllegalAccessException e) {
-                            throw new RuntimeException(e);
-                        } catch (InvocationTargetException e) {
-                            throw new RuntimeException(e.getTargetException());
-                        }
-                        final int len = sb.length();
-                        sb.delete(len - delimiter.length(), len);
-                        sb.append("]");
-                        flatList.add(sb.toString());
+                        // LIST never be null
+                        flatList.add(formatList(rowData.getLinkList(column)));
                         break;
                     default:
                         flatList.add("unknown column type: " + rowData.getColumnType(column));
@@ -344,6 +347,30 @@ public class Database implements ChromeDevtoolsDomain {
         public int code;
     }
 
+    private String formatDate(Date date) {
+        if (dateTimeFormatter == null) {
+            dateTimeFormatter = SimpleDateFormat.getDateTimeInstance(SimpleDateFormat.LONG, SimpleDateFormat.LONG);
+        }
+        return dateTimeFormatter.format(date) + " (" + date.getTime() + ')';
+    }
+
+    private String formatList(LinkView linkList) {
+        final StringBuilder sb = new StringBuilder(linkList.getTargetTable().getName());
+        sb.append("{");
+
+        final long size = linkList.size();
+        for (long pos = 0; pos < size; pos++) {
+            sb.append(linkList.getTargetRowIndex(pos));
+            sb.append(',');
+        }
+        if (size != 0) {
+            // remove last ','
+            sb.setLength(sb.length() - 1);
+        }
+
+        sb.append("}");
+        return sb.toString();
+    }
 
     private abstract static class RowFetcher {
         private static RowFetcher sInstance;
@@ -398,16 +425,29 @@ public class Database implements ChromeDevtoolsDomain {
     }
 
     private abstract static class RowWrapper {
+        private static final boolean s0_90_OR_NEWER;
         private static final boolean s0_86_OR_NEWER;
+        private static final boolean s0_83_OR_NEWER;
         private static final boolean s0_81_OR_NEWER;
 
         static {
             s0_81_OR_NEWER = is0_81_OrNewer();
-            s0_86_OR_NEWER = (s0_81_OR_NEWER && is0_86_OrNewer());
+            s0_83_OR_NEWER = (s0_81_OR_NEWER && is0_83_OrNewer());
+            s0_86_OR_NEWER = (s0_83_OR_NEWER && is0_86_OrNewer());
+            s0_90_OR_NEWER = (s0_86_OR_NEWER && is0_90_OrNewer());
         }
 
         private static boolean is0_81_OrNewer() {
             return Row.class.isInterface();
+        }
+
+        private static boolean is0_83_OrNewer() {
+            try {
+                Row.class.getDeclaredMethod("isNull", long.class);
+                return true;
+            } catch (NoSuchMethodException e) {
+                return false;
+            }
         }
 
         private static boolean is0_86_OrNewer() {
@@ -420,9 +460,44 @@ public class Database implements ChromeDevtoolsDomain {
             }
         }
 
+        private static boolean is0_90_OrNewer() {
+            // 0.90.0 changed the value of io.realm.RealmFieldType.DATE from 7 to 8
+
+            final Class<? extends Enum> fieldTypeClass;
+            try {
+                //noinspection unchecked
+                fieldTypeClass = (Class<? extends Enum>) Class.forName("io.realm.RealmFieldType");
+            } catch (ClassNotFoundException e) {
+                return false;
+            }
+
+            try {
+                final Enum<?> date = Enum.valueOf(fieldTypeClass, "DATE");
+                final Method getNativeValueMethod = fieldTypeClass.getDeclaredMethod("getNativeValue");
+                final Integer nativeValue = (Integer) getNativeValueMethod.invoke(date);
+
+                return nativeValue != 7;
+            } catch (NoSuchMethodException e) {
+                // at least before 0.90 does not throw this exception
+                return true;
+            } catch (IllegalAccessException e) {
+                // at least before 0.90 does not throw this exception
+                return true;
+            } catch (InvocationTargetException e) {
+                // at least before 0.90 does not throw this exception
+                return true;
+            }
+        }
+
         public static RowWrapper wrap(Row row) {
+            if (s0_90_OR_NEWER) {
+                return new RowWrapper_0_90(row);
+            }
             if (s0_86_OR_NEWER) {
                 return new RowWrapper_0_86(row);
+            }
+            if (s0_83_OR_NEWER) {
+                return new RowWrapper_0_83(row);
             }
             if (s0_81_OR_NEWER) {
                 return new RowWrapper_0_81(row);
@@ -436,6 +511,11 @@ public class Database implements ChromeDevtoolsDomain {
         public abstract long getIndex();
 
         public abstract StethoRealmFieldType getColumnType(long columnIndex);
+
+        // for BOOLEAN, INTEGER, FLOAT, DOUBLE, STRING, BINARY, DATE
+        public abstract boolean isNull(long columnIndex);
+        // for Link
+        public abstract boolean isNullLink(long columnIndex);
 
         public abstract long getLong(long columnIndex);
 
@@ -469,6 +549,7 @@ public class Database implements ChromeDevtoolsDomain {
 
         private final Method getIndexMethod;
         private final Method getColumnTypeMethod;
+        private final Method isNullLinkMethod;
         private final Method getLongMethod;
         private final Method getBooleanMethod;
         private final Method getFloatMethod;
@@ -486,6 +567,7 @@ public class Database implements ChromeDevtoolsDomain {
                 final Class<? extends Row> aClass = row.getClass();
                 getIndexMethod = aClass.getMethod("getIndex");
                 getColumnTypeMethod = aClass.getMethod("getColumnType", Long.TYPE);
+                isNullLinkMethod = aClass.getMethod("isNullLink", Long.TYPE);
                 getLongMethod = aClass.getMethod("getLong", Long.TYPE);
                 getBooleanMethod = aClass.getMethod("getBoolean", Long.TYPE);
                 getFloatMethod = aClass.getMethod("getFloat", Long.TYPE);
@@ -537,7 +619,7 @@ public class Database implements ChromeDevtoolsDomain {
                     return StethoRealmFieldType.UNSUPPORTED_MIXED;
                 }
                 if (name.equals("DATE")) {
-                    return StethoRealmFieldType.DATE;
+                    return StethoRealmFieldType.OLD_DATE;
                 }
                 if (name.equals("FLOAT")) {
                     return StethoRealmFieldType.FLOAT;
@@ -552,6 +634,23 @@ public class Database implements ChromeDevtoolsDomain {
                     return StethoRealmFieldType.LIST;
                 }
                 return StethoRealmFieldType.UNKNOWN;
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            } catch (InvocationTargetException e) {
+                throw new RuntimeException(e.getTargetException());
+            }
+        }
+
+        @Override
+        public boolean isNull(long columnIndex) {
+            // null column is not supported
+            return false;
+        }
+
+        @Override
+        public boolean isNullLink(long columnIndex) {
+            try {
+                return (boolean) isNullLinkMethod.invoke(row, columnIndex);
             } catch (IllegalAccessException e) {
                 throw new RuntimeException(e);
             } catch (InvocationTargetException e) {
@@ -659,8 +758,8 @@ public class Database implements ChromeDevtoolsDomain {
         }
     }
 
-    private static final class RowWrapper_0_81 extends RowWrapper {
-        private final Row row;
+    private static class RowWrapper_0_81 extends RowWrapper {
+        protected final Row row;
 
         private final Method getColumnTypeMethod;
 
@@ -704,7 +803,7 @@ public class Database implements ChromeDevtoolsDomain {
                     return StethoRealmFieldType.UNSUPPORTED_MIXED;
                 }
                 if (name.equals("DATE")) {
-                    return StethoRealmFieldType.DATE;
+                    return StethoRealmFieldType.OLD_DATE;
                 }
                 if (name.equals("FLOAT")) {
                     return StethoRealmFieldType.FLOAT;
@@ -724,6 +823,17 @@ public class Database implements ChromeDevtoolsDomain {
             } catch (InvocationTargetException e) {
                 throw new RuntimeException(e.getTargetException());
             }
+        }
+
+        @Override
+        public boolean isNull(long columnIndex) {
+            // null column is not supported
+            return false;
+        }
+
+        @Override
+        public boolean isNullLink(long columnIndex) {
+            return row.isNullLink(columnIndex);
         }
 
         @Override
@@ -772,6 +882,18 @@ public class Database implements ChromeDevtoolsDomain {
         }
     }
 
+    private static final class RowWrapper_0_83 extends RowWrapper_0_81 {
+
+        RowWrapper_0_83(Row row) {
+            super(row);
+        }
+
+        @Override
+        public boolean isNull(long columnIndex) {
+            return false;
+        }
+    }
+
     private static final class RowWrapper_0_86 extends RowWrapper {
         private final Row row;
 
@@ -807,6 +929,117 @@ public class Database implements ChromeDevtoolsDomain {
                 return StethoRealmFieldType.UNSUPPORTED_MIXED;
             }
             if (name.equals("DATE")) {
+                return StethoRealmFieldType.OLD_DATE;
+            }
+            if (name.equals("FLOAT")) {
+                return StethoRealmFieldType.FLOAT;
+            }
+            if (name.equals("DOUBLE")) {
+                return StethoRealmFieldType.DOUBLE;
+            }
+            if (name.equals("OBJECT")) {
+                return StethoRealmFieldType.OBJECT;
+            }
+            if (name.equals("LIST")) {
+                return StethoRealmFieldType.LIST;
+            }
+            return StethoRealmFieldType.UNKNOWN;
+        }
+
+        @Override
+        public boolean isNull(long columnIndex) {
+            return row.isNull(columnIndex);
+        }
+
+        @Override
+        public boolean isNullLink(long columnIndex) {
+            return row.isNullLink(columnIndex);
+        }
+
+        @Override
+        public long getLong(long columnIndex) {
+            return row.getLong(columnIndex);
+        }
+
+        @Override
+        public boolean getBoolean(long columnIndex) {
+            return row.getBoolean(columnIndex);
+        }
+
+        @Override
+        public float getFloat(long columnIndex) {
+            return row.getFloat(columnIndex);
+        }
+
+        @Override
+        public double getDouble(long columnIndex) {
+            return row.getDouble(columnIndex);
+        }
+
+        @Override
+        public Date getDate(long columnIndex) {
+            return row.getDate(columnIndex);
+        }
+
+        @Override
+        public String getString(long columnIndex) {
+            return row.getString(columnIndex);
+        }
+
+        @Override
+        public byte[] getBinaryByteArray(long columnIndex) {
+            return row.getBinaryByteArray(columnIndex);
+        }
+
+        @Override
+        public long getLink(long columnIndex) {
+            return row.getLink(columnIndex);
+        }
+
+        @Override
+        public LinkView getLinkList(long columnIndex) {
+            return row.getLinkList(columnIndex);
+        }
+    }
+
+    private static final class RowWrapper_0_90 extends RowWrapper {
+        private final Row row;
+
+        RowWrapper_0_90(Row row) {
+            this.row = row;
+        }
+
+        @Override
+        public long getIndex() {
+            return row.getIndex();
+        }
+
+        public StethoRealmFieldType getColumnType(long columnIndex) {
+            // io.realm.RealmFieldType
+            final Enum<?> columnType = row.getColumnType(columnIndex);
+            final String name = columnType.name();
+            if (name.equals("INTEGER")) {
+                return StethoRealmFieldType.INTEGER;
+            }
+            if (name.equals("BOOLEAN")) {
+                return StethoRealmFieldType.BOOLEAN;
+            }
+            if (name.equals("STRING")) {
+                return StethoRealmFieldType.STRING;
+            }
+            if (name.equals("BINARY")) {
+                return StethoRealmFieldType.BINARY;
+            }
+            if (name.equals("UNSUPPORTED_TABLE")) {
+                return StethoRealmFieldType.UNSUPPORTED_TABLE;
+            }
+            if (name.equals("UNSUPPORTED_MIXED")) {
+                return StethoRealmFieldType.UNSUPPORTED_MIXED;
+            }
+            if (name.equals("UNSUPPORTED_DATE")) {
+                return StethoRealmFieldType.OLD_DATE;
+            }
+            if (name.equals("DATE")) {
                 return StethoRealmFieldType.DATE;
             }
             if (name.equals("FLOAT")) {
@@ -822,6 +1055,16 @@ public class Database implements ChromeDevtoolsDomain {
                 return StethoRealmFieldType.LIST;
             }
             return StethoRealmFieldType.UNKNOWN;
+        }
+
+        @Override
+        public boolean isNull(long columnIndex) {
+            return row.isNull(columnIndex);
+        }
+
+        @Override
+        public boolean isNullLink(long columnIndex) {
+            return row.isNullLink(columnIndex);
         }
 
         @Override
