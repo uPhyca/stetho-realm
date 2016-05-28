@@ -5,8 +5,7 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:2.0.0'
-        classpath "io.realm:realm-gradle-plugin:0.89.1"
+        classpath 'com.android.tools.build:gradle:2.1.0'
     }
 }
 
@@ -14,4 +13,8 @@ allprojects {
     repositories {
         jcenter()
     }
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '2.13'
 }
