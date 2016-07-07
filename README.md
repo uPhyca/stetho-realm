@@ -42,6 +42,10 @@ public class MyApplication extends Application {
                         .enableDumpapp(Stetho.defaultDumperPluginsProvider(this))
                         .enableWebKitInspector(RealmInspectorModulesProvider.builder(this).build())
                         .build());
+                        
+        //------ init the db afterwards (just an example) ----------------
+        RealmConfiguration config = new RealmConfiguration.Builder(this).deleteRealmIfMigrationNeeded().name("yourDB.realm").build();
+        Realm.setDefaultConfiguration(config);
     }
 }
 ```
@@ -52,14 +56,16 @@ And also you can specify base folder for database files, encryption keys, limit,
 
 ```java
     RealmInspectorModulesProvider.builder(this)
-            .withFolder(getCacheDir())
-            .withEncryptionKey("encrypted.realm", key)
-            .withMetaTables()
+            .withFolder(getCacheDir()) //optional
+            .withEncryptionKey("encrypted.realm", key) //optional
+            .withMetaTables() //optional
             .withDescendingOrder()
             .withLimit(1000)
             .databaseNamePattern(Pattern.compile(".+\\.realm"))
             .build()
 ```
+
+**First try without optional methods**
 
 ### Usage with ProGuard
 Add the following lines if you use proguard. You might already have the first line in your proguard file.
