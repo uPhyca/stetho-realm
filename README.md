@@ -61,6 +61,13 @@ And also you can specify base folder for database files, encryption keys, limit,
             .build()
 ```
 
+### Usage with ProGuard
+Add the following lines if you use proguard. You might already have the first line in your proguard file.
+```
+-keep class com.facebook.stetho.** { *; }
+-keep class com.uphyca.** { *; }
+```
+
 ## use Stetho in debug build only
 
 http://littlerobots.nl/blog/stetho-for-android-debug-builds-only/
