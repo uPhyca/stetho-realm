@@ -123,7 +123,6 @@ public class RealmPeerManager extends ChromePeerManager {
                 return executeResultHandler.handleSelect(table, true);
             }
 
-            // TODO 読み出し以外にも対応する
             return null;
         } finally {
             group.close();
@@ -164,7 +163,7 @@ public class RealmPeerManager extends ChromePeerManager {
             if (durability == null) {
                 final Class<?> realmErrorClass = getRealmErrorClass();
                 if (realmErrorClass != null && realmErrorClass.isInstance(targetException)) {
-                    // Durability 未指定でRealmErrorが出た時は、MEM_ONLY も試してみる
+                    // Durability
                     return openSharedGroupForImplicitTransactions(databaseId, SharedGroup.Durability.MEM_ONLY);
                 }
             }
@@ -188,7 +187,7 @@ public class RealmPeerManager extends ChromePeerManager {
 
     private byte[] getEncryptionKey(String databaseId) {
         final String databaseName = new File(databaseId).getName();
-        if (encryptionKeys.containsKey(databaseName)) { // value が null の場合があるので getではダメ
+        if (encryptionKeys.containsKey(databaseName)) { // value null
             return encryptionKeys.get(databaseName);
         }
         return defaultEncryptionKey;

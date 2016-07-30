@@ -62,7 +62,7 @@ public class Database implements ChromeDevtoolsDomain {
         LIST(13),
         // BACKLINK(14); Not exposed until needed
 
-        // Stetho Realmが勝手に定義した特別な値
+        // Stetho Realm
         UNKNOWN(-1);
 
         private final int nativeValue;
@@ -78,18 +78,18 @@ public class Database implements ChromeDevtoolsDomain {
     }
 
     /**
-     * 指定されたパラメータで {@link Database}インスタンスを構築します。
+     *  {@link Database}
      *
-     * @param packageName          アプリケーションのパッケージネーム(application ID)。
-     * @param filesProvider        {@link RealmFilesProvider} インスタンス。
-     * @param withMetaTables       テーブル一覧にmeta テーブルを含めるかどうか。
-     * @param limit                返却するデータの最大行数
-     * @param ascendingOrder       {@code true}ならデータを id列の昇順に、{@code false}なら降順に返します。
-     * @param defaultEncryptionKey データベースの復号に使用するキー。
-     *                             {@code null} の場合は暗号化されていないものとして扱います。
-     *                             また、 {@code encryptionKeys} で個別のキーが指定されている
-     *                             データベースについては {@code encryptionKeys}の指定が優先されます。
-     * @param encryptionKeys       データベース個別のキーを指定するマップ。
+     * @param packageName          (application ID)
+     * @param filesProvider        {@link RealmFilesProvider}
+     * @param withMetaTables
+     * @param limit
+     * @param ascendingOrder       {@code true}
+     * @param defaultEncryptionKey
+     *                             {@code null}
+     *                             {@code encryptionKeys}
+     *                            {@code encryptionKeys}
+     * @param encryptionKeys
      */
     Database(String packageName,
              RealmFilesProvider filesProvider,
