@@ -117,7 +117,6 @@ public class RealmInspectorModulesProvider implements InspectorModulesProvider {
                 limit,
                 ascendingOrder,
                 defaultEncryptionKey,
-                dateFormat,
                 encryptionKeys));
         return modules;
     }
