@@ -15,22 +15,12 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
- * Stetho へモジュールを組み込むための InspectorModulesProvider です。
- * <p/>
- * Stetho の初期化の際に、{@link #builder(Context)} で作成した RealmInspectorModulesProvider インスタンスを
  * {@link com.facebook.stetho.Stetho.InitializerBuilder#enableWebKitInspector(InspectorModulesProvider)}
- * に渡してください。
- * <p/>
- * <pre>
  *     Stetho.initialize(
  *         Stetho.newInitializerBuilder(this)
  *             .enableDumpapp(Stetho.defaultDumperPluginsProvider(this))
  *             .enableWebKitInspector(RealmInspectorModulesProvider.builder(this).build())
  *             .build());
- * </pre>
- * <p/>
- * {@link com.uphyca.stetho_realm.RealmInspectorModulesProvider.ProviderBuilder} の各種メソッドを呼ぶことで
- * メタデータテーブルを表示に含めるかや、データベースファイル名のパターンを指定することができます。
  */
 @SuppressWarnings("unused")
 public class RealmInspectorModulesProvider implements InspectorModulesProvider {
@@ -39,6 +29,7 @@ public class RealmInspectorModulesProvider implements InspectorModulesProvider {
 
     private static final long DEFAULT_LIMIT = 250L;
     private static final boolean DEFAULT_ASCENDING_ORDER = true;
+    private static final String DEFAULT_DATE_FORMAT = "yyyy-MM-dd HH:mm:ss z";
 
     private static final int ENCRYPTION_KEY_LENGTH = 64;
 
@@ -60,7 +51,7 @@ public class RealmInspectorModulesProvider implements InspectorModulesProvider {
                                                      InspectorModulesProvider provider,
                                                      boolean withMetaTables,
                                                      Pattern databaseNamePattern) {
-        return new RealmInspectorModulesProvider(context.getPackageName(), provider, context.getFilesDir(), withMetaTables, databaseNamePattern, DEFAULT_LIMIT, DEFAULT_ASCENDING_ORDER, null, null);
+        return new RealmInspectorModulesProvider(context.getPackageName(), provider, context.getFilesDir(), withMetaTables, databaseNamePattern, DEFAULT_LIMIT, DEFAULT_ASCENDING_ORDER, DEFAULT_DATE_FORMAT, null, null);
     }
 
     private final String packageName;
@@ -70,6 +61,7 @@ public class RealmInspectorModulesProvider implements InspectorModulesProvider {
     private final Pattern databaseNamePattern;
     private final long limit;
     private final boolean ascendingOrder;
+    private final String dateFormat;
     private byte[] defaultEncryptionKey;
     private Map<String, byte[]> encryptionKeys;
 
@@ -80,6 +72,7 @@ public class RealmInspectorModulesProvider implements InspectorModulesProvider {
                                           Pattern databaseNamePattern,
                                           long limit,
                                           boolean ascendingOrder,
+                                          String dateFormat,
                                           byte[] defaultEncryptionKey,
                                           Map<String, byte[]> encryptionKeys) {
         this.packageName = packageName;
@@ -93,6 +86,7 @@ public class RealmInspectorModulesProvider implements InspectorModulesProvider {
         }
         this.limit = limit;
         this.ascendingOrder = ascendingOrder;
+        this.dateFormat = dateFormat;
         this.defaultEncryptionKey = defaultEncryptionKey;
         this.encryptionKeys = encryptionKeys == null ? Collections.<String, byte[]>emptyMap() : encryptionKeys;
     }
@@ -131,6 +125,7 @@ public class RealmInspectorModulesProvider implements InspectorModulesProvider {
         private File folder;
         private long limit = DEFAULT_LIMIT;
         private boolean ascendingOrder = DEFAULT_ASCENDING_ORDER;
+        private String dateFormat = DEFAULT_DATE_FORMAT;
         private byte[] defaultEncryptionKey;
         private Map<String, byte[]> encryptionKeys;
 
@@ -161,6 +156,11 @@ public class RealmInspectorModulesProvider implements InspectorModulesProvider {
 
         public ProviderBuilder withDescendingOrder() {
             this.ascendingOrder = false;
+            return this;
+        }
+
+        public ProviderBuilder withDateFormat(String dateFormat) {
+            this.dateFormat = dateFormat;
             return this;
         }
 
@@ -216,6 +216,7 @@ public class RealmInspectorModulesProvider implements InspectorModulesProvider {
                     databaseNamePattern,
                     limit,
                     ascendingOrder,
+                    dateFormat,
                     defaultEncryptionKey,
                     encryptionKeys);
         }
