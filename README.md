@@ -16,7 +16,7 @@ repositories {
 }
 
 dependencies {
-    compile 'com.facebook.stetho:stetho:1.3.1'
+    compile 'com.facebook.stetho:stetho:1.4.1'
 }
 ```
 
