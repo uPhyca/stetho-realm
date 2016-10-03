@@ -17,7 +17,7 @@ android {
 
     defaultConfig {
         minSdkVersion 9
-        targetSdkVersion 23
+        targetSdkVersion 24
         versionCode 1000
         versionName "2.0.0-SNAPSHOT"
         consumerProguardFiles 'proguard-rules.pro'
