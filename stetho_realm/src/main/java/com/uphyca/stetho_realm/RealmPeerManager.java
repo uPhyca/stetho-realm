@@ -7,8 +7,6 @@ import com.facebook.stetho.inspector.helper.PeerRegistrationListener;
 import com.facebook.stetho.inspector.jsonrpc.JsonRpcPeer;
 
 import java.io.File;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -17,9 +15,9 @@ import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
+import io.realm.RealmConfiguration;
 import io.realm.exceptions.RealmError;
-import io.realm.internal.ImplicitTransaction;
-import io.realm.internal.SharedGroup;
+import io.realm.internal.SharedRealm;
 import io.realm.internal.Table;
 
 public class RealmPeerManager extends ChromePeerManager {
@@ -54,19 +52,17 @@ public class RealmPeerManager extends ChromePeerManager {
     public List<String> getDatabaseTableNames(String databaseId, boolean withMetaTables) {
         final List<String> tableNames = new ArrayList<>();
 
-        final SharedGroup group = openSharedGroupForImplicitTransactions(databaseId);
+        final SharedRealm sharedRealm = openSharedRealm(databaseId);
         //noinspection TryWithIdenticalCatches,TryFinallyCanBeTryWithResources
         try {
-            final ImplicitTransaction transaction = group.beginImplicitTransaction();
-
-            for (int i = 0; i < transaction.size(); i++) {
-                final String tableName = transaction.getTableName(i);
+            for (int i = 0; i < sharedRealm.size(); i++) {
+                final String tableName = sharedRealm.getTableName(i);
                 if (withMetaTables || tableName.startsWith(TABLE_PREFIX)) {
                     tableNames.add(tableName);
                 }
             }
         } finally {
-            group.close();
+            sharedRealm.close();
         }
 
         return tableNames;
@@ -108,73 +104,51 @@ public class RealmPeerManager extends ChromePeerManager {
     private static final Pattern SELECT_PATTERN = Pattern.compile("SELECT[ \\t]+rowid,[ \\t]+\\*[ \\t]+FROM \"([^\"]+)\"");
 
     public <T> T executeSQL(String databaseId, String query, RealmPeerManager.ExecuteResultHandler<T> executeResultHandler) {
-        final SharedGroup group = openSharedGroupForImplicitTransactions(databaseId);
+        final SharedRealm sharedRealm = openSharedRealm(databaseId);
         //noinspection TryWithIdenticalCatches,TryFinallyCanBeTryWithResources
         try {
-            final ImplicitTransaction transaction = group.beginImplicitTransaction();
-
             query = query.trim();
 
             final Matcher selectMatcher = SELECT_PATTERN.matcher(query);
             if (selectMatcher.matches()) {
                 final String tableName = selectMatcher.group(1);
 
-                final Table table = transaction.getTable(tableName);
+                final Table table = sharedRealm.getTable(tableName);
                 return executeResultHandler.handleSelect(table, true);
             }
 
             // TODO 読み出し以外にも対応する
             return null;
         } finally {
-            group.close();
+            sharedRealm.close();
         }
     }
 
-    private SharedGroup openSharedGroupForImplicitTransactions(String databaseId) {
-        return openSharedGroupForImplicitTransactions(databaseId, null);
+    private SharedRealm openSharedRealm(String databaseId) {
+        return openSharedRealm(databaseId, null);
     }
 
-    private SharedGroup openSharedGroupForImplicitTransactions(String databaseId,
-                                                               @Nullable SharedGroup.Durability durability) {
+    private SharedRealm openSharedRealm(String databaseId,
+                                                               @Nullable SharedRealm.Durability durability) {
         final byte[] encryptionKey = getEncryptionKey(databaseId);
 
-        //noinspection TryWithIdenticalCatches
-        try {
-            try {
-                // 0.82.* or later
-                final Constructor<SharedGroup> constructor = SharedGroup.class.getConstructor(String.class, Boolean.TYPE, SharedGroup.Durability.class, byte[].class);
-                return constructor.newInstance(databaseId,
-                        true,
-                        durability != null ? durability : SharedGroup.Durability.FULL,
-                        encryptionKey);
-            } catch (NoSuchMethodException e) {
-                // 0.80.*, 0.81.*
-                final Constructor<SharedGroup> constructor = SharedGroup.class.getConstructor(String.class, Boolean.TYPE, byte[].class);
-                return constructor.newInstance(databaseId, true, encryptionKey);
-            }
-        } catch (NoSuchMethodException e) {
-            throw new RuntimeException(e);
-        } catch (InstantiationException e) {
-            throw new RuntimeException(e);
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
-        } catch (InvocationTargetException e) {
-            final Throwable targetException = e.getTargetException();
+        final RealmConfiguration.Builder builder = new RealmConfiguration.Builder();
+        if (durability == SharedRealm.Durability.MEM_ONLY) {
+            builder.inMemory();
+        }
+        if (encryptionKey != null) {
+            builder.encryptionKey(encryptionKey);
+        }
 
+        try {
+            return SharedRealm.getInstance(builder.build());
+        } catch (RealmError e) {
             if (durability == null) {
-                final Class<?> realmErrorClass = getRealmErrorClass();
-                if (realmErrorClass != null && realmErrorClass.isInstance(targetException)) {
-                    // Durability 未指定でRealmErrorが出た時は、MEM_ONLY も試してみる
-                    return openSharedGroupForImplicitTransactions(databaseId, SharedGroup.Durability.MEM_ONLY);
-                }
+                // Durability 未指定でRealmErrorが出た時は、MEM_ONLY も試してみる
+                builder.inMemory();
+                return SharedRealm.getInstance(builder.build());
             }
-            if (targetException instanceof Error) {
-                throw (Error) targetException;
-            }
-            if (targetException instanceof RuntimeException) {
-                throw (RuntimeException) targetException;
-            }
-            throw new RuntimeException(targetException);
+            throw e;
         }
     }
 

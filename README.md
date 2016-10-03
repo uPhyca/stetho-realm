@@ -17,11 +17,10 @@ repositories {
 
 dependencies {
     compile 'com.facebook.stetho:stetho:1.3.1'
-    compile 'com.uphyca:stetho_realm:0.9.0'
 }
 ```
 
-Stetho-Realm supports Stetho 1.1 or newer and Realm 0.80.0 or newer.
+Stetho-Realm 2.0 supports Stetho 1.1 or newer and Realm 2.0.0 or newer. If you'd like to use Stetho-Realm with Realm 0.80.0 to Realm 1.2.0, please use the latest version of Realm 0.x.
 
 ### Integration
 In your `Application` class, please initialize Stetho with `RealmInspectorModulesProvider.ProviderBuilder` as follows.
@@ -36,6 +35,8 @@ public class MyApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+
+        Realm.init(this);
 
         Stetho.initialize(
                 Stetho.newInitializerBuilder(this)

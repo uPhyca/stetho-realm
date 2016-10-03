@@ -17,11 +17,10 @@ repositories {
 
 dependencies {
     compile 'com.facebook.stetho:stetho:1.3.1'
-    compile 'com.uphyca:stetho_realm:0.9.0'
 }
 ```
 
-Stetho-Realm は、 Stetho 1.1以降、Realm 0.80.0 以降に対応しています。
+Stetho-Realm 2.0 は、 Stetho 1.1以降、Realm 2.0.0 以降に対応しています。Realm 0.80.0 からRealm 1.2.0でStetho-Realmを使用する場合は Stetho-Realm 0.x の最新版を利用してください。
 
 ### アプリケーションへの組み込み
 `Application` クラスで以下のように Stetho の初期化を行ってください。
@@ -42,6 +41,8 @@ public class MyApplication extends Application {
     public void onCreate() {
         super.onCreate();
 
+        Realm.init(this);
+
         Stetho.initialize(
                 Stetho.newInitializerBuilder(this)
                         .enableDumpapp(Stetho.defaultDumperPluginsProvider(this))
@@ -53,7 +54,7 @@ public class MyApplication extends Application {
 
 `RealmInspectorModulesProvider.ProviderBuilder` の各種メソッドを呼び出すことで、データベースファイルを
 探すフォルダの指定、表示する件数の上限、表示をidの昇順にする加か降順にするか、メタデータのテーブル
-(Realm 0.80.2 では pk と metadataテーブル)の情報を表示するかどうか、復号に使用するキー、
+(pk と metadataテーブル)の情報を表示するかどうか、復号に使用するキー、
 データベースファイル名のパターンを指定することができます。
 
 ```java

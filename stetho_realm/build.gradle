@@ -18,8 +18,8 @@ android {
     defaultConfig {
         minSdkVersion 9
         targetSdkVersion 23
-        versionCode 16
-        versionName "0.9.0"
+        versionCode 1000
+        versionName "2.0.0-SNAPSHOT"
     }
 
     buildTypes {
@@ -42,7 +42,7 @@ android {
 
 dependencies {
     provided 'com.facebook.stetho:stetho:1.3.1'
-    provided 'io.realm:realm-android-library:0.90.0'
+    provided 'io.realm:realm-android-library:2.0.0'
     compile fileTree(dir: 'libs', include: '*.jar')
 }
 
@@ -56,7 +56,7 @@ publish {
     userOrg = 'uphyca'
     groupId = 'com.uphyca'
     artifactId = 'stetho_realm'
-    version = '0.9.0'
+    version = '2.0.0-SNAPSHOT'
     description = 'Stetho-Realm is a Realm module for Stetho.'
     website = 'https://github.com/uPhyca/stetho-realm'
     issueTracker = 'https://github.com/uPhyca/stetho-realm/issues'
