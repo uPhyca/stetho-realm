@@ -20,6 +20,7 @@ android {
         targetSdkVersion 23
         versionCode 1000
         versionName "2.0.0-SNAPSHOT"
+        consumerProguardFiles 'proguard-rules.pro'
     }
 
     buildTypes {
