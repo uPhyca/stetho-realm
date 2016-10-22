@@ -61,6 +61,8 @@ public class RealmPeerManager extends ChromePeerManager {
                     tableNames.add(tableName);
                 }
             }
+        } catch (Exception e) {
+            e.printStackTrace();
         } finally {
             sharedRealm.close();
         }
@@ -73,7 +75,7 @@ public class RealmPeerManager extends ChromePeerManager {
         Iterable<File> tidiedList = tidyDatabaseList(potentialDatabaseFiles);
         for (File database : tidiedList) {
             Database.DatabaseObject databaseParams = new Database.DatabaseObject();
-            databaseParams.id = database.getPath();
+            databaseParams.id = database.getName();
             databaseParams.name = database.getName();
             databaseParams.domain = packageName;
             databaseParams.version = "N/A";
@@ -116,12 +118,13 @@ public class RealmPeerManager extends ChromePeerManager {
                 final Table table = sharedRealm.getTable(tableName);
                 return executeResultHandler.handleSelect(table, true);
             }
-
-            // TODO 読み出し以外にも対応する
-            return null;
+        } catch (Exception e) {
+            e.printStackTrace();
         } finally {
             sharedRealm.close();
         }
+        // TODO 読み出し以外にも対応する
+        return null;
     }
 
     private SharedRealm openSharedRealm(String databaseId) {
@@ -129,10 +132,10 @@ public class RealmPeerManager extends ChromePeerManager {
     }
 
     private SharedRealm openSharedRealm(String databaseId,
-                                                               @Nullable SharedRealm.Durability durability) {
+                                        @Nullable SharedRealm.Durability durability) {
         final byte[] encryptionKey = getEncryptionKey(databaseId);
-
         final RealmConfiguration.Builder builder = new RealmConfiguration.Builder();
+        builder.name(databaseId);
         if (durability == SharedRealm.Durability.MEM_ONLY) {
             builder.inMemory();
         }
@@ -142,7 +145,8 @@ public class RealmPeerManager extends ChromePeerManager {
 
         try {
             return SharedRealm.getInstance(builder.build());
-        } catch (RealmError e) {
+        } catch (Exception e) {
+            e.printStackTrace();
             if (durability == null) {
                 // Durability 未指定でRealmErrorが出た時は、MEM_ONLY も試してみる
                 builder.inMemory();
@@ -156,14 +160,14 @@ public class RealmPeerManager extends ChromePeerManager {
         try {
             return Class.forName("io.realm.exceptions.RealmError");
         } catch (ClassNotFoundException e) {
+            e.printStackTrace();
             return null;
         }
     }
 
     private byte[] getEncryptionKey(String databaseId) {
-        final String databaseName = new File(databaseId).getName();
-        if (encryptionKeys.containsKey(databaseName)) { // value が null の場合があるので getではダメ
-            return encryptionKeys.get(databaseName);
+        if (encryptionKeys.containsKey(databaseId)) { // value が null の場合があるので getではダメ
+            return encryptionKeys.get(databaseId);
         }
         return defaultEncryptionKey;
     }
