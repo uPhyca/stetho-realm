@@ -139,6 +139,8 @@ public class RealmPeerManager extends ChromePeerManager {
         if (encryptionKey != null) {
             builder.encryptionKey(encryptionKey);
         }
+        final File realmFile = new File(databaseId);
+        builder.directory(realmFile.getParentFile()).name(realmFile.getName());
 
         try {
             return SharedRealm.getInstance(builder.build());
