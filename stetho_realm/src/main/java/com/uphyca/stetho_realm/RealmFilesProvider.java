@@ -10,37 +10,39 @@ import java.util.regex.Pattern;
 
 public class RealmFilesProvider implements DatabaseFilesProvider {
     private final File folder;
-    private final Pattern databaseNamePattern;
+    private final FilenameFilter filter;
 
-    public RealmFilesProvider(File folder, Pattern databaseNamePattern) {
+    public RealmFilesProvider(File folder, final Pattern databaseNamePattern) {
         this.folder = folder;
-        this.databaseNamePattern = databaseNamePattern;
-    }
-
-    @Override
-    public List<File> getDatabaseFiles() {
-
-        final File baseDir = folder;
-        final String[] realmFiles = baseDir.list(new FilenameFilter() {
+        filter = new FilenameFilter() {
             @Override
             public boolean accept(File dir, String filename) {
                 return databaseNamePattern.matcher(filename).matches();
             }
-        });
+        };
+    }
 
-        final ArrayList<File> files = new ArrayList<>();
+    @Override
+    public List<File> getDatabaseFiles() {
+        return findDatabaseFiles(folder);
+    }
 
-        if (realmFiles == null) {
-            return files;
-        }
+    private List<File> findDatabaseFiles(File baseDir) {
+        List<File> files = new ArrayList<>();
 
-        for (String realmFileName : realmFiles) {
-            final File file = new File(baseDir, realmFileName);
-            if (file.isFile() && file.canRead()) {
-                files.add(file);
+        String[] realmFiles = baseDir.list(filter);
+        if (realmFiles != null) {
+            for (String realmFileName : realmFiles) {
+                File file = new File(baseDir, realmFileName);
+                if (file.isDirectory()) {
+                    files.addAll(findDatabaseFiles(file));
+                } else if (file.isFile() && file.canRead()) {
+                    files.add(file);
+                }
             }
         }
 
         return files;
     }
+
 }

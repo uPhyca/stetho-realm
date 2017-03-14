@@ -128,11 +128,14 @@ public class RealmPeerManager extends ChromePeerManager {
         return openSharedRealm(databaseId, null);
     }
 
-    private SharedRealm openSharedRealm(String databaseId,
-                                                               @Nullable SharedRealm.Durability durability) {
+    private SharedRealm openSharedRealm(String databaseId, @Nullable SharedRealm.Durability durability) {
         final byte[] encryptionKey = getEncryptionKey(databaseId);
 
-        final RealmConfiguration.Builder builder = new RealmConfiguration.Builder();
+        final File file = new File(databaseId);
+        final File filepath = new File(file.getParent());
+        final String databaseName = file.getName();
+        final RealmConfiguration.Builder builder = new RealmConfiguration.Builder().directory(filepath).name(databaseName);
+
         if (durability == SharedRealm.Durability.MEM_ONLY) {
             builder.inMemory();
         }
