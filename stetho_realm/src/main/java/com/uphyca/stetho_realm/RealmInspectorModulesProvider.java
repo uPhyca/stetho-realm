@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+
 /**
  * Stetho へモジュールを組み込むための InspectorModulesProvider です。
  * <p/>
@@ -57,9 +58,9 @@ public class RealmInspectorModulesProvider implements InspectorModulesProvider {
 
     @Deprecated
     public static RealmInspectorModulesProvider wrap(Context context,
-                                                     InspectorModulesProvider provider,
-                                                     boolean withMetaTables,
-                                                     Pattern databaseNamePattern) {
+            InspectorModulesProvider provider,
+            boolean withMetaTables,
+            Pattern databaseNamePattern) {
         return new RealmInspectorModulesProvider(context.getPackageName(), provider, context.getFilesDir(), withMetaTables, databaseNamePattern, DEFAULT_LIMIT, DEFAULT_ASCENDING_ORDER, null, null);
     }
 
@@ -74,14 +75,14 @@ public class RealmInspectorModulesProvider implements InspectorModulesProvider {
     private Map<String, byte[]> encryptionKeys;
 
     private RealmInspectorModulesProvider(String packageName,
-                                          InspectorModulesProvider baseProvider,
-                                          File folder,
-                                          boolean withMetaTables,
-                                          Pattern databaseNamePattern,
-                                          long limit,
-                                          boolean ascendingOrder,
-                                          byte[] defaultEncryptionKey,
-                                          Map<String, byte[]> encryptionKeys) {
+            InspectorModulesProvider baseProvider,
+            File folder,
+            boolean withMetaTables,
+            Pattern databaseNamePattern,
+            long limit,
+            boolean ascendingOrder,
+            byte[] defaultEncryptionKey,
+            Map<String, byte[]> encryptionKeys) {
         this.packageName = packageName;
         this.baseProvider = baseProvider;
         this.folder = folder;

@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
+
 public class RealmFilesProvider implements DatabaseFilesProvider {
     private final File folder;
     private final Pattern databaseNamePattern;

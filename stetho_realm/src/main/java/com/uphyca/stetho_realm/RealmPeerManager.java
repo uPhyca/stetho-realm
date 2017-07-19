@@ -20,6 +20,7 @@ import io.realm.exceptions.RealmError;
 import io.realm.internal.SharedRealm;
 import io.realm.internal.Table;
 
+
 public class RealmPeerManager extends ChromePeerManager {
     private static final String TABLE_PREFIX = "class_"; // Realm#TABLE_PREFIX
 
@@ -29,9 +30,9 @@ public class RealmPeerManager extends ChromePeerManager {
     private Map<String, byte[]> encryptionKeys;
 
     public RealmPeerManager(String packageName,
-                            RealmFilesProvider filesProvider,
-                            byte[] defaultEncryptionKey,
-                            Map<String, byte[]> encryptionKeys) {
+            RealmFilesProvider filesProvider,
+            byte[] defaultEncryptionKey,
+            Map<String, byte[]> encryptionKeys) {
         this.packageName = packageName;
         this.realmFilesProvider = filesProvider;
         this.defaultEncryptionKey = defaultEncryptionKey;
@@ -129,7 +130,7 @@ public class RealmPeerManager extends ChromePeerManager {
     }
 
     private SharedRealm openSharedRealm(String databaseId,
-                                                               @Nullable SharedRealm.Durability durability) {
+            @Nullable SharedRealm.Durability durability) {
         final byte[] encryptionKey = getEncryptionKey(databaseId);
 
         final RealmConfiguration.Builder builder = new RealmConfiguration.Builder();

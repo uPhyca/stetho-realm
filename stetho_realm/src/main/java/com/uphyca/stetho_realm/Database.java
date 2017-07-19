@@ -33,6 +33,7 @@ import io.realm.internal.LinkView;
 import io.realm.internal.Row;
 import io.realm.internal.Table;
 
+
 @SuppressWarnings("WeakerAccess")
 public class Database implements ChromeDevtoolsDomain {
 
@@ -79,24 +80,24 @@ public class Database implements ChromeDevtoolsDomain {
     /**
      * 指定されたパラメータで {@link Database}インスタンスを構築します。
      *
-     * @param packageName          アプリケーションのパッケージネーム(application ID)。
-     * @param filesProvider        {@link RealmFilesProvider} インスタンス。
-     * @param withMetaTables       テーブル一覧にmeta テーブルを含めるかどうか。
-     * @param limit                返却するデータの最大行数
-     * @param ascendingOrder       {@code true}ならデータを id列の昇順に、{@code false}なら降順に返します。
+     * @param packageName アプリケーションのパッケージネーム(application ID)。
+     * @param filesProvider {@link RealmFilesProvider} インスタンス。
+     * @param withMetaTables テーブル一覧にmeta テーブルを含めるかどうか。
+     * @param limit 返却するデータの最大行数
+     * @param ascendingOrder {@code true}ならデータを id列の昇順に、{@code false}なら降順に返します。
      * @param defaultEncryptionKey データベースの復号に使用するキー。
-     *                             {@code null} の場合は暗号化されていないものとして扱います。
-     *                             また、 {@code encryptionKeys} で個別のキーが指定されている
-     *                             データベースについては {@code encryptionKeys}の指定が優先されます。
-     * @param encryptionKeys       データベース個別のキーを指定するマップ。
+     * {@code null} の場合は暗号化されていないものとして扱います。
+     * また、 {@code encryptionKeys} で個別のキーが指定されている
+     * データベースについては {@code encryptionKeys}の指定が優先されます。
+     * @param encryptionKeys データベース個別のキーを指定するマップ。
      */
     Database(String packageName,
-             RealmFilesProvider filesProvider,
-             boolean withMetaTables,
-             long limit,
-             boolean ascendingOrder,
-             byte[] defaultEncryptionKey,
-             Map<String, byte[]> encryptionKeys) {
+            RealmFilesProvider filesProvider,
+            boolean withMetaTables,
+            long limit,
+            boolean ascendingOrder,
+            byte[] defaultEncryptionKey,
+            Map<String, byte[]> encryptionKeys) {
         this.realmPeerManager = new RealmPeerManager(packageName, filesProvider, defaultEncryptionKey, encryptionKeys);
         this.objectMapper = new ObjectMapper();
         this.withMetaTables = withMetaTables;
