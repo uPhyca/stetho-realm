@@ -134,6 +134,10 @@ public class RealmPeerManager extends ChromePeerManager {
         final byte[] encryptionKey = getEncryptionKey(databaseId);
 
         final RealmConfiguration.Builder builder = new RealmConfiguration.Builder();
+        final File databaseFile = new File(databaseId).getAbsoluteFile();
+        builder.directory(databaseFile.getParentFile());
+        builder.name(databaseFile.getName());
+
         if (durability == SharedRealm.Durability.MEM_ONLY) {
             builder.inMemory();
         }
