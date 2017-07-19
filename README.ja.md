@@ -10,14 +10,12 @@ Stetho がもともと持っている SQLite データベースの内容を表�
 grab via Gradle:
 ```groovy
 repositories {
-    maven {
-        url 'https://github.com/uPhyca/stetho-realm/raw/master/maven-repo'
-    }
+    maven { url 'https://github.com/linchaolong/stetho-realm/raw/master/maven-repo' } // realm-stetho
 }
 
 dependencies {
-    compile 'com.facebook.stetho:stetho:1.4.1'
-    compile 'com.uphyca:stetho_realm:2.0.0'
+    compile 'com.facebook.stetho:stetho:1.4.2'
+    compile 'com.uphyca:stetho_realm:2.0.1'
 }
 ```
 
