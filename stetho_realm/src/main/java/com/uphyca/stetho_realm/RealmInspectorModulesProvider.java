@@ -17,11 +17,11 @@ import java.util.regex.Pattern;
 
 /**
  * Stetho へモジュールを組み込むための InspectorModulesProvider です。
- * <p/>
+ * <p>
  * Stetho の初期化の際に、{@link #builder(Context)} で作成した RealmInspectorModulesProvider インスタンスを
  * {@link com.facebook.stetho.Stetho.InitializerBuilder#enableWebKitInspector(InspectorModulesProvider)}
  * に渡してください。
- * <p/>
+ * <p>
  * <pre>
  *     Stetho.initialize(
  *         Stetho.newInitializerBuilder(this)
@@ -29,7 +29,7 @@ import java.util.regex.Pattern;
  *             .enableWebKitInspector(RealmInspectorModulesProvider.builder(this).build())
  *             .build());
  * </pre>
- * <p/>
+ * <p>
  * {@link com.uphyca.stetho_realm.RealmInspectorModulesProvider.ProviderBuilder} の各種メソッドを呼ぶことで
  * メタデータテーブルを表示に含めるかや、データベースファイル名のパターンを指定することができます。
  */
