@@ -101,20 +101,23 @@ public class RealmInspectorModulesProvider implements InspectorModulesProvider {
     @Override
     public Iterable<ChromeDevtoolsDomain> get() {
         final List<ChromeDevtoolsDomain> modules = new ArrayList<>();
+        com.facebook.stetho.inspector.protocol.module.Database database = null;
         for (ChromeDevtoolsDomain domain : baseProvider.get()) {
             if (domain instanceof com.facebook.stetho.inspector.protocol.module.Database) {
+                database = (com.facebook.stetho.inspector.protocol.module.Database) domain;
                 continue;
             }
             modules.add(domain);
         }
-        modules.add(new com.uphyca.stetho_realm.Database(
+        final Database realmDatabase = new Database(
                 packageName,
                 new RealmFilesProvider(folder, databaseNamePattern),
                 withMetaTables,
                 limit,
                 ascendingOrder,
                 defaultEncryptionKey,
-                encryptionKeys));
+                encryptionKeys);
+        modules.add(database == null ? realmDatabase : new com.uphyca.stetho_realm.delegate.Database(database, realmDatabase, databaseNamePattern));
         return modules;
     }
 

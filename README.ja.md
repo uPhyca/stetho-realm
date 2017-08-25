@@ -27,12 +27,11 @@ Stetho-Realm 2.0 は、 Stetho 1.1以降、Realm 2.0.0 以降に対応してい�
 `Application` クラスで以下のように Stetho の初期化を行ってください。
 
 `RealmInspectorModulesProvider.ProviderBuilder` を用いて `InspectorModulesProvider` を作成します。
-`RealmInspectorModulesProvider.ProviderBuilder` はデフォルトのモジュールリストからSQLite 用の
-モジュールを取り除き、代わりに Realm 用のモジュールを追加します。
+`RealmInspectorModulesProvider.ProviderBuilder` はデフォルトのモジュールリストにRealm 用のモジュールを追加します。
 `RealmInspectorModulesProvider.ProviderBuilder#baseProvider(InspectorModulesProvider)`を用いて
 デフォルト以外の InspectorModulesProvider を使用させることもできます。
 
-以下はデフォルトの設定で有効になっている SQLite モジュールの代わりに Realm モジュールを
+以下はデフォルトの設定で有効になっている SQLite モジュールに Realm モジュールを追加して
 使用する例です。
 
 ```java
