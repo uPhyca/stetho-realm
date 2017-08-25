@@ -26,7 +26,7 @@ Stetho-Realm 2.0 supports Stetho 1.1 or newer and Realm 2.0.0 or newer. If you'd
 ### Integration
 In your `Application` class, please initialize Stetho with `RealmInspectorModulesProvider.ProviderBuilder` as follows.
 
-`RealmInspectorModulesProvider.ProviderBuilder` replaces SQLite module with Realm module.
+`RealmInspectorModulesProvider.ProviderBuilder` appends Realm module.
 You can use `RealmInspectorModulesProvider.ProviderBuilder#baseProvider(InspectorModulesProvider)`
 in order to customized `InspectorModulesProvider` instead of default provider.
 
