@@ -3,7 +3,7 @@ gradle.properties
 
 # for gradle, IDEA
 .gradle
-build/
+**/build/
 *.iml
 !.idea/runConfigurations/*
 .idea/*.xml

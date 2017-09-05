@@ -42,8 +42,8 @@ android {
 }
 
 dependencies {
-    provided 'com.facebook.stetho:stetho:1.4.1'
-    provided 'io.realm:realm-android-library:2.0.0'
+    provided 'com.facebook.stetho:stetho:1.5.0'
+    provided 'io.realm:realm-android-library:3.7.0'
     compile fileTree(dir: 'libs', include: '*.jar')
 }
 
