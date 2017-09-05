@@ -17,6 +17,7 @@ import javax.annotation.Nullable;
 
 import io.realm.RealmConfiguration;
 import io.realm.exceptions.RealmError;
+import io.realm.internal.OsRealmConfig;
 import io.realm.internal.SharedRealm;
 import io.realm.internal.Table;
 
@@ -130,7 +131,7 @@ public class RealmPeerManager extends ChromePeerManager {
     }
 
     private SharedRealm openSharedRealm(String databaseId,
-            @Nullable SharedRealm.Durability durability) {
+            @Nullable OsRealmConfig.Durability durability) {
         final byte[] encryptionKey = getEncryptionKey(databaseId);
 
         final RealmConfiguration.Builder builder = new RealmConfiguration.Builder();
@@ -138,7 +139,7 @@ public class RealmPeerManager extends ChromePeerManager {
         builder.directory(databaseFile.getParentFile());
         builder.name(databaseFile.getName());
 
-        if (durability == SharedRealm.Durability.MEM_ONLY) {
+        if (durability == OsRealmConfig.Durability.MEM_ONLY) {
             builder.inMemory();
         }
         if (encryptionKey != null) {
