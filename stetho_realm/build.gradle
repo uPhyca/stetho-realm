@@ -13,7 +13,7 @@ apply plugin: 'com.novoda.bintray-release'
 
 android {
     compileSdkVersion 26
-    buildToolsVersion "26.0.0"
+    buildToolsVersion "26.0.1"
 
     defaultConfig {
         minSdkVersion 9
@@ -42,8 +42,8 @@ android {
 }
 
 dependencies {
-    provided 'com.facebook.stetho:stetho:1.4.1'
-    provided 'io.realm:realm-android-library:2.0.0'
+    provided 'com.facebook.stetho:stetho:1.5.0'
+    provided 'io.realm:realm-android-library:3.7.1'
     compile fileTree(dir: 'libs', include: '*.jar')
 }
 
