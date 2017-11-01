@@ -29,7 +29,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-import io.realm.internal.LinkView;
+import io.realm.internal.OsList;
 import io.realm.internal.Row;
 import io.realm.internal.Table;
 
@@ -354,13 +354,13 @@ public class Database implements ChromeDevtoolsDomain {
         return dateTimeFormatter.format(date) + " (" + date.getTime() + ')';
     }
 
-    private String formatList(LinkView linkList) {
+    private String formatList(OsList linkList) {
         final StringBuilder sb = new StringBuilder(linkList.getTargetTable().getName());
         sb.append("{");
 
         final long size = linkList.size();
         for (long pos = 0; pos < size; pos++) {
-            sb.append(linkList.getTargetRowIndex(pos));
+            sb.append(linkList.getUncheckedRow(pos).getIndex());
             sb.append(',');
         }
         if (size != 0) {
@@ -485,8 +485,8 @@ public class Database implements ChromeDevtoolsDomain {
             return row.getLink(columnIndex);
         }
 
-        LinkView getLinkList(long columnIndex) {
-            return row.getLinkList(columnIndex);
+        OsList getLinkList(long columnIndex) {
+            return row.getModelList(columnIndex);
         }
     }
 }
