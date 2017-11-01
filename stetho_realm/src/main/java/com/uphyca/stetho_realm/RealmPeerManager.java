@@ -147,7 +147,7 @@ public class RealmPeerManager extends ChromePeerManager {
         }
 
         try {
-            return SharedRealm.getInstance(builder.build());
+            return SharedRealm.getInstance(builder.deleteRealmIfMigrationNeeded().build());
         } catch (RealmError e) {
             if (durability == null) {
                 // Durability 未指定でRealmErrorが出た時は、MEM_ONLY も試してみる

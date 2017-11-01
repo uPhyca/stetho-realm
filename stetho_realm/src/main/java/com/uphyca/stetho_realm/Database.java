@@ -486,7 +486,7 @@ public class Database implements ChromeDevtoolsDomain {
         }
 
         OsList getLinkList(long columnIndex) {
-            return row.getLinkList(columnIndex);
+            return row.getModelList(columnIndex);
         }
     }
 }
