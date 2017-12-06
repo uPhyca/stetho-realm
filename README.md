@@ -63,6 +63,16 @@ And also you can specify base folder for database files, encryption keys, limit,
             .build()
 ```
 
+### Integration to React Native
+
+React Native project have different JavaScript Realm dependency -> "realm": "^2.0.12"
+this package have native Java project module but `Realm` is JavaScript object here. In Android project it's needs to include (better in debug build) dependendcy to Java `realm-android-library-object-server` lib:
+```groovy
+dependencies {
+    debugCompile 'io.realm:realm-android-library-object-server:4.2.0'
+}
+```
+
 ## use Stetho in debug build only
 
 http://littlerobots.nl/blog/stetho-for-android-debug-builds-only/
