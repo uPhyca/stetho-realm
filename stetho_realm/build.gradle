@@ -16,10 +16,10 @@ android {
     buildToolsVersion "26.0.3"
 
     defaultConfig {
-        minSdkVersion 9
+        minSdkVersion 14
         targetSdkVersion 26
-        versionCode 1001
-        versionName "2.2.0"
+        versionCode 1002
+        versionName "2.2.1"
         consumerProguardFiles 'proguard-rules.pro'
     }
 
@@ -43,7 +43,7 @@ android {
 
 dependencies {
     provided 'com.facebook.stetho:stetho:1.5.0'
-    provided 'io.realm:realm-android-library:4.3.1'
+    provided 'io.realm:realm-android-library:4.3.4'
     compile fileTree(dir: 'libs', include: '*.jar')
 }
 
@@ -57,7 +57,7 @@ publish {
     userOrg = 'uphyca'
     groupId = 'com.uphyca'
     artifactId = 'stetho_realm'
-    version = '2.2.0'
+    version = '2.2.1'
     description = 'Stetho-Realm is a Realm module for Stetho.'
     website = 'https://github.com/uPhyca/stetho-realm'
     issueTracker = 'https://github.com/uPhyca/stetho-realm/issues'
