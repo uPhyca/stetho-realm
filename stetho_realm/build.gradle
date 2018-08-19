@@ -3,7 +3,7 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath 'com.novoda:bintray-release:0.5.0'
+        classpath 'com.novoda:bintray-release:0.8.0'
     }
 }
 
@@ -43,7 +43,7 @@ android {
 
 dependencies {
     provided 'com.facebook.stetho:stetho:1.5.0'
-    provided 'io.realm:realm-android-library:4.3.4'
+    provided 'io.realm:realm-android-library:5.4.1'
     compile fileTree(dir: 'libs', include: '*.jar')
 }
 
