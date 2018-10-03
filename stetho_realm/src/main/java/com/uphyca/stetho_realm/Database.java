@@ -29,7 +29,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-import io.realm.internal.LinkView;
+import io.realm.RealmFieldType;
+import io.realm.internal.OsList;
 import io.realm.internal.Row;
 import io.realm.internal.Table;
 
@@ -61,7 +62,13 @@ public class Database implements ChromeDevtoolsDomain {
         OBJECT(12),
         LIST(13),
         // BACKLINK(14); Not exposed until needed
-
+        INTEGER_LIST(15),
+        BOOLEAN_LIST(16),
+        STRING_LIST(17),
+        BINARY_LIST(18),
+        DATE_LIST(19),
+        FLOAT_LIST(20),
+        DOUBLE_LIST(21),
         // Stetho Realmが勝手に定義した特別な値
         UNKNOWN(-1);
 
@@ -80,24 +87,24 @@ public class Database implements ChromeDevtoolsDomain {
     /**
      * 指定されたパラメータで {@link Database}インスタンスを構築します。
      *
-     * @param packageName アプリケーションのパッケージネーム(application ID)。
-     * @param filesProvider {@link RealmFilesProvider} インスタンス。
-     * @param withMetaTables テーブル一覧にmeta テーブルを含めるかどうか。
-     * @param limit 返却するデータの最大行数
-     * @param ascendingOrder {@code true}ならデータを id列の昇順に、{@code false}なら降順に返します。
+     * @param packageName          アプリケーションのパッケージネーム(application ID)。
+     * @param filesProvider        {@link RealmFilesProvider} インスタンス。
+     * @param withMetaTables       テーブル一覧にmeta テーブルを含めるかどうか。
+     * @param limit                返却するデータの最大行数
+     * @param ascendingOrder       {@code true}ならデータを id列の昇順に、{@code false}なら降順に返します。
      * @param defaultEncryptionKey データベースの復号に使用するキー。
-     * {@code null} の場合は暗号化されていないものとして扱います。
-     * また、 {@code encryptionKeys} で個別のキーが指定されている
-     * データベースについては {@code encryptionKeys}の指定が優先されます。
-     * @param encryptionKeys データベース個別のキーを指定するマップ。
+     *                             {@code null} の場合は暗号化されていないものとして扱います。
+     *                             また、 {@code encryptionKeys} で個別のキーが指定されている
+     *                             データベースについては {@code encryptionKeys}の指定が優先されます。
+     * @param encryptionKeys       データベース個別のキーを指定するマップ。
      */
     Database(String packageName,
-            RealmFilesProvider filesProvider,
-            boolean withMetaTables,
-            long limit,
-            boolean ascendingOrder,
-            byte[] defaultEncryptionKey,
-            Map<String, byte[]> encryptionKeys) {
+             RealmFilesProvider filesProvider,
+             boolean withMetaTables,
+             long limit,
+             boolean ascendingOrder,
+             byte[] defaultEncryptionKey,
+             Map<String, byte[]> encryptionKeys) {
         this.realmPeerManager = new RealmPeerManager(packageName, filesProvider, defaultEncryptionKey, encryptionKeys);
         this.objectMapper = new ObjectMapper();
         this.withMetaTables = withMetaTables;
@@ -275,6 +282,20 @@ public class Database implements ChromeDevtoolsDomain {
                         // LIST never be null
                         flatList.add(formatList(rowData.getLinkList(column)));
                         break;
+                    case INTEGER_LIST:
+                    case BOOLEAN_LIST:
+                    case DOUBLE_LIST:
+                    case STRING_LIST:
+                    case BINARY_LIST:
+                    case DATE_LIST:
+                    case FLOAT_LIST:
+                        if (rowData.isNullLink(column)) {
+                            flatList.add(NULL);
+                        } else {
+                            RealmFieldType columnType = table.getColumnType(column);
+                            flatList.add(formatValueList(rowData.getValueList(column, columnType), columnType));
+                        }
+                        break;
                     default:
                         flatList.add("unknown column type: " + rowData.getColumnType(column));
                         break;
@@ -354,13 +375,31 @@ public class Database implements ChromeDevtoolsDomain {
         return dateTimeFormatter.format(date) + " (" + date.getTime() + ')';
     }
 
-    private String formatList(LinkView linkList) {
+    private String formatList(OsList linkList) {
         final StringBuilder sb = new StringBuilder(linkList.getTargetTable().getName());
         sb.append("{");
 
         final long size = linkList.size();
         for (long pos = 0; pos < size; pos++) {
-            sb.append(linkList.getTargetRowIndex(pos));
+            sb.append(linkList.getUncheckedRow(pos).getIndex());
+            sb.append(',');
+        }
+        if (size != 0) {
+            // remove last ','
+            sb.setLength(sb.length() - 1);
+        }
+
+        sb.append("}");
+        return sb.toString();
+    }
+
+    private String formatValueList(OsList linkList, RealmFieldType columnType) {
+        final StringBuilder sb = new StringBuilder(columnType.name());
+        sb.append("{");
+
+        final long size = linkList.size();
+        for (long pos = 0; pos < size; pos++) {
+            sb.append(linkList.getValue(pos));
             sb.append(',');
         }
         if (size != 0) {
@@ -442,6 +481,13 @@ public class Database implements ChromeDevtoolsDomain {
             if (name.equals("LIST")) {
                 return StethoRealmFieldType.LIST;
             }
+            if (name.equals("INTEGER_LIST")) {
+                return StethoRealmFieldType.INTEGER_LIST;
+            }
+            if (name.equals("BOOLEAN_LIST")) {
+                return StethoRealmFieldType.BOOLEAN_LIST;
+            }
+
             return StethoRealmFieldType.UNKNOWN;
         }
 
@@ -485,8 +531,12 @@ public class Database implements ChromeDevtoolsDomain {
             return row.getLink(columnIndex);
         }
 
-        LinkView getLinkList(long columnIndex) {
-            return row.getLinkList(columnIndex);
+        OsList getLinkList(long columnIndex) {
+            return row.getModelList(columnIndex);
+        }
+
+        OsList getValueList(long columnIndex, RealmFieldType fieldType) {
+            return row.getValueList(columnIndex, fieldType);
         }
     }
 }

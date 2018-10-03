@@ -1,11 +1,16 @@
 package com.uphyca.stetho_realm;
 
 import android.database.sqlite.SQLiteException;
-
 import com.facebook.stetho.inspector.helper.ChromePeerManager;
 import com.facebook.stetho.inspector.helper.PeerRegistrationListener;
 import com.facebook.stetho.inspector.jsonrpc.JsonRpcPeer;
+import io.realm.RealmConfiguration;
+import io.realm.exceptions.RealmError;
+import io.realm.internal.OsRealmConfig;
+import io.realm.internal.OsSharedRealm;
+import io.realm.internal.Table;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -13,26 +18,19 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.annotation.Nullable;
-
-import io.realm.RealmConfiguration;
-import io.realm.exceptions.RealmError;
-import io.realm.internal.SharedRealm;
-import io.realm.internal.Table;
-
 
 public class RealmPeerManager extends ChromePeerManager {
     private static final String TABLE_PREFIX = "class_"; // Realm#TABLE_PREFIX
-
+    private static final Pattern SELECT_PATTERN = Pattern.compile("SELECT[ \\t]+rowid,[ \\t]+\\*[ \\t]+FROM \"([^\"]+)\"");
     private final String packageName;
     private final RealmFilesProvider realmFilesProvider;
     private byte[] defaultEncryptionKey;
     private Map<String, byte[]> encryptionKeys;
 
     public RealmPeerManager(String packageName,
-            RealmFilesProvider filesProvider,
-            byte[] defaultEncryptionKey,
-            Map<String, byte[]> encryptionKeys) {
+                            RealmFilesProvider filesProvider,
+                            byte[] defaultEncryptionKey,
+                            Map<String, byte[]> encryptionKeys) {
         this.packageName = packageName;
         this.realmFilesProvider = filesProvider;
         this.defaultEncryptionKey = defaultEncryptionKey;
@@ -50,10 +48,27 @@ public class RealmPeerManager extends ChromePeerManager {
         });
     }
 
+    /**
+     * Attempt to smartly eliminate uninteresting shadow databases such as -journal and -uid.  Note
+     * that this only removes the database if it is true that it shadows another database lacking
+     * the uninteresting suffix.
+     *
+     * @param databaseFiles Raw list of database files.
+     * @return Tidied list with shadow databases removed.
+     */
+    // @VisibleForTesting
+    static List<File> tidyDatabaseList(List<File> databaseFiles) {
+        List<File> tidiedList = new ArrayList<>();
+        for (File databaseFile : databaseFiles) {
+            tidiedList.add(databaseFile);
+        }
+        return tidiedList;
+    }
+
     public List<String> getDatabaseTableNames(String databaseId, boolean withMetaTables) {
         final List<String> tableNames = new ArrayList<>();
 
-        final SharedRealm sharedRealm = openSharedRealm(databaseId);
+        final OsSharedRealm sharedRealm = openSharedRealm(databaseId);
         //noinspection TryWithIdenticalCatches,TryFinallyCanBeTryWithResources
         try {
             for (int i = 0; i < sharedRealm.size(); i++) {
@@ -85,27 +100,8 @@ public class RealmPeerManager extends ChromePeerManager {
         }
     }
 
-    /**
-     * Attempt to smartly eliminate uninteresting shadow databases such as -journal and -uid.  Note
-     * that this only removes the database if it is true that it shadows another database lacking
-     * the uninteresting suffix.
-     *
-     * @param databaseFiles Raw list of database files.
-     * @return Tidied list with shadow databases removed.
-     */
-    // @VisibleForTesting
-    static List<File> tidyDatabaseList(List<File> databaseFiles) {
-        List<File> tidiedList = new ArrayList<>();
-        for (File databaseFile : databaseFiles) {
-            tidiedList.add(databaseFile);
-        }
-        return tidiedList;
-    }
-
-    private static final Pattern SELECT_PATTERN = Pattern.compile("SELECT[ \\t]+rowid,[ \\t]+\\*[ \\t]+FROM \"([^\"]+)\"");
-
     public <T> T executeSQL(String databaseId, String query, RealmPeerManager.ExecuteResultHandler<T> executeResultHandler) {
-        final SharedRealm sharedRealm = openSharedRealm(databaseId);
+        final OsSharedRealm sharedRealm = openSharedRealm(databaseId);
         //noinspection TryWithIdenticalCatches,TryFinallyCanBeTryWithResources
         try {
             query = query.trim();
@@ -125,12 +121,12 @@ public class RealmPeerManager extends ChromePeerManager {
         }
     }
 
-    private SharedRealm openSharedRealm(String databaseId) {
+    private OsSharedRealm openSharedRealm(String databaseId) {
         return openSharedRealm(databaseId, null);
     }
 
-    private SharedRealm openSharedRealm(String databaseId,
-            @Nullable SharedRealm.Durability durability) {
+    private OsSharedRealm openSharedRealm(String databaseId,
+                                          @Nullable OsRealmConfig.Durability durability) {
         final byte[] encryptionKey = getEncryptionKey(databaseId);
 
         final RealmConfiguration.Builder builder = new RealmConfiguration.Builder();
@@ -138,7 +134,7 @@ public class RealmPeerManager extends ChromePeerManager {
         builder.directory(databaseFile.getParentFile());
         builder.name(databaseFile.getName());
 
-        if (durability == SharedRealm.Durability.MEM_ONLY) {
+        if (durability == OsRealmConfig.Durability.MEM_ONLY) {
             builder.inMemory();
         }
         if (encryptionKey != null) {
@@ -146,12 +142,12 @@ public class RealmPeerManager extends ChromePeerManager {
         }
 
         try {
-            return SharedRealm.getInstance(builder.build());
+            return OsSharedRealm.getInstance(builder.build());
         } catch (RealmError e) {
             if (durability == null) {
                 // Durability 未指定でRealmErrorが出た時は、MEM_ONLY も試してみる
                 builder.inMemory();
-                return SharedRealm.getInstance(builder.build());
+                return OsSharedRealm.getInstance(builder.build());
             }
             throw e;
         }
